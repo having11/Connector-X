@@ -1,0 +1,42 @@
+﻿pos_x,pos_y,rotation,side,designator,mpn,pack,value,mount_type,place
+165.0,-64.0,180.0,top,C1,,C_0603_1608Metric,10uF,smt,True
+161.0,-64.085,180.0,top,C2,,C_0603_1608Metric,10uF,smt,True
+179.0,-81.0,0.0,top,C3,,C_0603_1608Metric,100nF,smt,True
+179.5,-100.5,0.0,top,C4,,C_0603_1608Metric,100nF,smt,True
+176.0,-61.0,0.0,top,D1,,TO-252-2,MBRD1060,smt,True
+143.5,-113.0,0.0,top,D2,,LED_1206_3216Metric,PWR,smt,True
+143.6,-108.5,0.0,top,D3,,LED_1206_3216Metric,ALV,smt,True
+143.5,-104.0,180.0,top,D4,,LED_1206_3216Metric,I2C,smt,True
+179.0,-86.0,90.0,top,D5,,LED_WS2812B_PLCC4_5.0x5.0mm_P3.2mm,WS2812B,smt,True
+179.35,-105.45,90.0,top,D6,,LED_WS2812B_PLCC4_5.0x5.0mm_P3.2mm,WS2812B,smt,True
+179.0,-93.5,180.0,top,D7,,D_SMA,D_Schottky,smt,True
+179.5,-112.5,180.0,top,D8,,D_SMA,D_Schottky,smt,True
+128.5,-69.5,0.0,top,D9,,LED_0805_2012Metric,CONFIG,smt,True
+132.0,-51.45,0.0,top,H1,,MountingHole_3.2mm_M3_Pad_Via,MountingHole,tht,True
+181.65,-51.45,0.0,top,H2,,MountingHole_3.2mm_M3_Pad_Via,MountingHole,tht,True
+185.2,-131.23,0.0,top,H3,,MountingHole_3.2mm_M3_Pad_Via,MountingHole,tht,True
+128.57,-131.23,0.0,top,H4,,MountingHole_3.2mm_M3_Pad_Via,MountingHole,tht,True
+185.0,-65.0,180.0,top,J1,,BarrelJack_Horizontal,Barrel_Jack_Switch,tht,True
+157.7,-111.5,90.0,top,J10,,PinHeader_1x04_P2.54mm_Vertical,I2C 1,tht,True
+167.62,-101.0,-90.0,top,J11,,PinHeader_1x06_P2.54mm_Vertical,SPI 0,tht,True
+121.475,-107.08,180.0,top,J2,,PinHeader_1x03_P2.54mm_Horizontal,Conn_01x03_Socket,tht,True
+121.575,-117.525,180.0,top,J3,,PinHeader_1x03_P2.54mm_Horizontal,Conn_01x03_Socket,tht,True
+121.375,-128.08,180.0,top,J4,,PinHeader_1x03_P2.54mm_Horizontal,Conn_01x03_Socket,tht,True
+188.225,-89.96,90.0,top,J5,,JST_VH_B3PS-VH_1x03_P3.96mm_Horizontal,Conn_01x03_Socket,tht,True
+188.225,-109.46,90.0,top,J6,,JST_VH_B3PS-VH_1x03_P3.96mm_Horizontal,Conn_01x03_Socket,tht,True
+177.15,-119.46,90.0,bottom,J7,,PinSocket_2x17_P2.54mm_Vertical,RIO side,tht,True
+177.18,-128.725,-90.0,top,J8,,PinHeader_2x17_P2.54mm_Vertical,Top side,tht,True
+157.7,-106.5,90.0,top,J9,,PinHeader_1x04_P2.54mm_Vertical,I2C 0,tht,True
+134.0,-101.0,-90.0,top,Q1,,SOT-23,IRLML5203TRPBF,smt,True
+138.5,-113.0,180.0,top,R1,,R_0603_1608Metric,220,smt,True
+138.5,-108.5,180.0,top,R2,,R_0603_1608Metric,220,smt,True
+138.5,-104.0,0.0,top,R3,,R_0603_1608Metric,470,smt,True
+123.5,-69.5,180.0,top,R4,,R_0603_1608Metric,220,smt,True
+138.5,-63.5,0.0,top,SW1,,SW_SPST_PTS645,RST,smt,True
+124.0,-63.5,0.0,top,SW2,,SW_SPST_PTS645,CONFIG,smt,True
+151.5,-63.5,90.0,top,SW3,,SW_DIP_SPSTx03_Slide_6.7x9.18mm_W6.73mm_P2.54mm_LowProfile_JPin,SW_DIP_x03,smt,True
+177.0,-69.0,0.0,top,TP1,,TestPoint_Pad_D2.5mm,TestPoint,tht,True
+120.0,-97.5,180.0,bottom,TP2,,TestPoint_Pad_D2.5mm,TestPoint,tht,True
+124.5,-97.5,180.0,bottom,TP3,,TestPoint_Pad_D2.5mm,TestPoint,tht,True
+163.0,-57.0,90.0,top,U1,,SOT-223-3_TabPin2,NCP1117-3.3_SOT223,smt,True
+144.0,-84.0,90.0,top,U2,,RaspberryPi_Pico_Common,RaspberryPi_Pico,tht,True

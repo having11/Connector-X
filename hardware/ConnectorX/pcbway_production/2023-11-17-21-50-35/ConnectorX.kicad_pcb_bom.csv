@@ -1,0 +1,28 @@
+﻿designator,quantity,value,pack,mpn,mount_type
+"C1, C2",2,10uF,C_0603_1608Metric,,smt
+"C3, C4",2,100nF,C_0603_1608Metric,,smt
+D1,1,MBRD1060,TO-252-2,,smt
+D2,1,PWR,LED_1206_3216Metric,,smt
+D3,1,ALV,LED_1206_3216Metric,,smt
+D4,1,I2C,LED_1206_3216Metric,,smt
+"D5, D6",2,WS2812B,LED_WS2812B_PLCC4_5.0x5.0mm_P3.2mm,,smt
+"D7, D8",2,D_Schottky,D_SMA,,smt
+D9,1,CONFIG,LED_0805_2012Metric,,smt
+"H1, H2, H3, H4",4,MountingHole,MountingHole_3.2mm_M3_Pad_Via,,tht
+J1,1,Barrel_Jack_Switch,BarrelJack_Horizontal,,tht
+J10,1,I2C 1,PinHeader_1x04_P2.54mm_Vertical,,tht
+J11,1,SPI 0,PinHeader_1x06_P2.54mm_Vertical,,tht
+"J2, J3, J4",3,Conn_01x03_Socket,PinHeader_1x03_P2.54mm_Horizontal,,tht
+"J5, J6",2,Conn_01x03_Socket,JST_VH_B3PS-VH_1x03_P3.96mm_Horizontal,,tht
+J7,1,RIO side,PinSocket_2x17_P2.54mm_Vertical,,tht
+J8,1,Top side,PinHeader_2x17_P2.54mm_Vertical,,tht
+J9,1,I2C 0,PinHeader_1x04_P2.54mm_Vertical,,tht
+Q1,1,IRLML5203TRPBF,SOT-23,,smt
+"R1, R2, R4",3,220,R_0603_1608Metric,,smt
+R3,1,470,R_0603_1608Metric,,smt
+SW1,1,RST,SW_SPST_PTS645,,smt
+SW2,1,CONFIG,SW_SPST_PTS645,,smt
+SW3,1,SW_DIP_x03,SW_DIP_SPSTx03_Slide_6.7x9.18mm_W6.73mm_P2.54mm_LowProfile_JPin,,smt
+"TP1, TP2, TP3",3,TestPoint,TestPoint_Pad_D2.5mm,,tht
+U1,1,NCP1117-3.3_SOT223,SOT-223-3_TabPin2,,smt
+U2,1,RaspberryPi_Pico,RaspberryPi_Pico_Common,,tht
