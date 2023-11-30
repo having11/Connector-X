@@ -36,6 +36,7 @@ static volatile bool newDataToParse = false;
 static Configuration config;
 static Configurator configurator;
 static uint8_t ledPort = 0;
+static uint8_t i2cAddress;
 
 // TODO: Move these to an array
 static Adafruit_NeoPixel *pixels0;
@@ -55,6 +56,9 @@ void setup()
 {
     pinMode(Pin::LED::AliveStatus, OUTPUT);
     digitalWrite(Pin::LED::AliveStatus, HIGH);
+    pinMode(Pin::I2C::Port0::AddrSwPin0, INPUT_PULLUP);
+    pinMode(Pin::I2C::Port0::AddrSwPin1, INPUT_PULLUP);
+    pinMode(Pin::I2C::Port0::AddrSwPin2, INPUT_PULLUP);
 
     Wire1.setSDA(Pin::I2C::Port1::SDA);
     Wire1.setSCL(Pin::I2C::Port1::SCL);
@@ -63,6 +67,8 @@ void setup()
     EEPROM.begin(Pin::CONFIG::EepromSize);
 
     Serial.begin(UartBaudRate);
+
+    delay(4000);
 
     config = configurator.begin();
 
@@ -113,6 +119,7 @@ void setup()
 
     Serial.printf("Got config:\r\n%s\r\n",
                   Configurator::toString(config).c_str());
+    Serial.printf("I2C0 slave address=0x%X\r\n", i2cAddress);
 }
 
 Adafruit_NeoPixel *getPixels(uint8_t port)
@@ -384,14 +391,11 @@ void centralRespond(Response response)
 
 void initI2C0(void)
 {
-    pinMode(Pin::I2C::Port0::AddrSwPin0, INPUT_PULLUP);
-    uint8_t addr0Val = digitalRead(Pin::I2C::Port0::AddrSwPin0) == HIGH ? 1 : 0;
-    pinMode(Pin::I2C::Port0::AddrSwPin1, INPUT_PULLUP);
-    uint8_t addr1Val = digitalRead(Pin::I2C::Port0::AddrSwPin1) == HIGH ? 1 : 0;
-    pinMode(Pin::I2C::Port0::AddrSwPin2, INPUT_PULLUP);
-    uint8_t addr2Val = digitalRead(Pin::I2C::Port0::AddrSwPin2) == HIGH ? 1 : 0;
+    uint8_t addr0Val = 1 - gpio_get(Pin::I2C::Port0::AddrSwPin0);
+    uint8_t addr1Val = 1 - gpio_get(Pin::I2C::Port0::AddrSwPin1);
+    uint8_t addr2Val = 1 - gpio_get(Pin::I2C::Port0::AddrSwPin2);
 
-    uint8_t i2cAddress =
+    i2cAddress =
         Pin::I2C::Port0::BaseAddress |
         (addr2Val << 2) |
         (addr1Val << 1) |
@@ -401,7 +405,7 @@ void initI2C0(void)
     Wire.setSCL(Pin::I2C::Port0::SCL);
     Wire.onReceive(receiveEvent); // register events
     Wire.onRequest(requestEvent);
-    Wire.begin(); // join i2c bus as slave
+    Wire.begin(i2cAddress); // join i2c bus as slave
 }
 
 void initPixels(Adafruit_NeoPixel *pixels, LedConfiguration *config)
