@@ -351,9 +351,7 @@ void requestEvent()
     {
         auto runner = getPatternRunner(ledPort);
 
-        mutex_enter_blocking(&i2cCommandMtx);
-        auto msg = runner->getCurrentColor();
-        mutex_exit(&i2cCommandMtx);
+        uint32_t msg = runner->getCurrentColor();
 
         res.responseData.responseReadColor.msg = msg;
     }
