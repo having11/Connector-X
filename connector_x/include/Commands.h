@@ -31,7 +31,9 @@ enum class CommandType
     // W
     RadioSend = 12,
     // R
-    RadioGetLatestReceived = 13
+    RadioGetLatestReceived = 13,
+    // R
+    GetColor = 14
 };
 
 struct CommandOn
@@ -165,6 +167,7 @@ union ResponseData
     ResponseDigitalRead responseDigitalRead;
     ResponseRadioLastReceived responseRadioLastReceived;
     ResponseReadConfiguration responseReadConfiguration;
+    ResponseReadColor responseReadColor;
 };
 
 struct Response
