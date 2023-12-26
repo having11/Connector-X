@@ -161,6 +161,11 @@ struct ResponseReadConfiguration
     Configuration config;
 };
 
+struct ResponseReadColor
+{
+    uint32_t color;
+}
+
 union ResponseData
 {
     ResponsePatternDone responsePatternDone;

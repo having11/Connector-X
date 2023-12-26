@@ -350,10 +350,10 @@ void requestEvent()
     case CommandType::GetColor:
     {
         auto runner = getPatternRunner(ledPort);
-
         uint32_t msg = runner->getCurrentColor();
-
+        
         res.responseData.responseReadColor.msg = msg;
+        break;
     }
 
     default:
@@ -382,6 +382,9 @@ void centralRespond(Response response)
         break;
     case CommandType::ReadConfig:
         size = sizeof(ResponseReadConfiguration);
+        break;
+    case CommandType::GetColor:
+        size = sizeof(ResponseReadColor);
         break;
     default:
         size = 0;
