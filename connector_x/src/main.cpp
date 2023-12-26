@@ -393,6 +393,9 @@ void centralRespond(Response response)
     case CommandType::GetColor:
         size = sizeof(ResponseReadColor);
         break;
+    case CommandType::GetPort:
+        size = sizeof(ResponseReadPort);
+        break;
     default:
         size = 0;
     }
