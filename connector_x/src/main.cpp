@@ -37,8 +37,8 @@ static Configuration config;
 static Configurator configurator;
 static uint8_t ledPort = 0;
 
-static Adafruit_NeoPixel *pixels[2];
-static PatternRunner *patternRunners[2];
+static Adafruit_NeoPixel *pixels[Pin::LED::NumPorts];
+static PatternRunner *patternRunners[Pin::LED::NumPorts];
 
 #ifdef ENABLE_RADIO
 static PacketRadio *radio;
@@ -64,9 +64,9 @@ void setup()
     config = configurator.begin();
 
     pixels[0] = new Adafruit_NeoPixel(config.led0.count, Pin::LED::Dout0,
-                                    NEO_GRB + NEO_KHZ800);
+                                      NEO_GRB + NEO_KHZ800);
     pixels[1] = new Adafruit_NeoPixel(config.led1.count, Pin::LED::Dout1,
-                                    NEO_GRB + NEO_KHZ800);
+                                      NEO_GRB + NEO_KHZ800);
     patternRunners[0] = new PatternRunner(pixels[0], Animation::patterns);
     patternRunners[1] = new PatternRunner(pixels[1], Animation::patterns);
 
@@ -98,15 +98,14 @@ void setup()
     initPixels(pixels[0], &config.led0);
     initPixels(pixels[1], &config.led1);
 
-    #ifdef ENABLE_RADIO
+#ifdef ENABLE_RADIO
     radio = new PacketRadio(&SPI1, config, handleRadioDataReceive);
 
     for (int i = 0; i < 2; i++)
     {
         radio->addTeam(config.initialTeams[i]);
     }
-    #endif
-
+#endif
 
     Serial.printf("Got config:\r\n%s\r\n",
                   Configurator::toString(config).c_str());
@@ -114,22 +113,22 @@ void setup()
 
 Adafruit_NeoPixel *getPixels(uint8_t port)
 {
-    if (port == 0)
+    if (port < Pin::LED::NumPorts)
     {
-        return pixels[0];
+        return pixels[port];
     }
 
-    return pixels[1];
+    return pixels[Pin::LED::DefaultPort];
 }
 
 PatternRunner *getPatternRunner(uint8_t port)
 {
-    if (port == 0)
+    if (port < Pin::LED::NumPorts)
     {
-        return patternRunners[0];
+        return patternRunners[port];
     }
 
-    return patternRunners[1];
+    return patternRunners[Pin::LED::DefaultPort];
 }
 
 void loop()
@@ -161,8 +160,10 @@ void loop()
         case CommandType::On:
         {
             // Go back to running the current color and pattern
-            patternRunner[0]->reset();
-            patternRunner[1]->reset();
+            for (int i = 0; i < Pin::LED::NumPorts; i++)
+            {
+                patternRunners[i]->reset();
+            }
             systemOn = true;
             break;
         }
@@ -237,17 +238,6 @@ void loop()
             break;
         }
 
-        case CommandType::GetColor:
-        {
-            auto runner = getPatternRunner(ledPort);
-
-            mutex_enter_blocking(&i2cCommandMtx);
-            auto msg = runner->getCurrentColor();
-            mutex_exit(&i2cCommandMtx);
-
-            res.responseData.responseReadColor.msg = msg;
-        }
-
 #ifdef ENABLE_RADIO
         case CommandType::RadioSend:
         {
@@ -273,8 +263,10 @@ void loop()
 
     if (systemOn)
     {
-        patternRunner[0]->update();
-        patternRunner[1]->update();
+        for (int i = 0; i < Pin::LED::NumPorts; i++)
+        {
+            patternRunners[i]->update();
+        }
     }
 
 #ifdef ENABLE_RADIO
@@ -353,6 +345,17 @@ void requestEvent()
         auto cfg = configurator.readConfig();
         res.responseData.responseReadConfiguration.config = cfg;
         break;
+    }
+
+    case CommandType::GetColor:
+    {
+        auto runner = getPatternRunner(ledPort);
+
+        mutex_enter_blocking(&i2cCommandMtx);
+        auto msg = runner->getCurrentColor();
+        mutex_exit(&i2cCommandMtx);
+
+        res.responseData.responseReadColor.msg = msg;
     }
 
     default:
