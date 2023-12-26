@@ -33,7 +33,9 @@ enum class CommandType
     // R
     RadioGetLatestReceived = 13,
     // R
-    GetColor = 14
+    GetColor = 14,
+    // R
+    GetPort = 15
 };
 
 struct CommandOn
@@ -166,6 +168,11 @@ struct ResponseReadColor
     uint32_t color;
 }
 
+struct ResponseReadPort
+{
+    uint8_t port;
+}
+
 union ResponseData
 {
     ResponsePatternDone responsePatternDone;
@@ -173,6 +180,7 @@ union ResponseData
     ResponseRadioLastReceived responseRadioLastReceived;
     ResponseReadConfiguration responseReadConfiguration;
     ResponseReadColor responseReadColor;
+    ResponseReadPort responseReadPort;
 };
 
 struct Response
