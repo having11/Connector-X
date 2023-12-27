@@ -115,6 +115,14 @@ struct CommandRadioGetLatestReceived
 {
 };
 
+struct CommandGetColor
+{
+};
+
+struct CommandGetPort
+{
+};
+
 union CommandData
 {
     CommandOn commandOn;
@@ -130,6 +138,8 @@ union CommandData
     CommandReadConfig commandReadConfig;
     CommandRadioSend commandRadioSend;
     CommandRadioGetLatestReceived commandRadioGetLatestReceived;
+    CommandGetColor commandGetColor;
+    CommandGetPort commandGetPort;
 };
 
 struct Command
@@ -166,12 +176,12 @@ struct ResponseReadConfiguration
 struct ResponseReadColor
 {
     uint32_t color;
-}
+};
 
 struct ResponseReadPort
 {
     uint8_t port;
-}
+};
 
 union ResponseData
 {
