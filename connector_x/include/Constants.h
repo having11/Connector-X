@@ -46,6 +46,8 @@ namespace Pin
         constexpr uint8_t Dout0 = 20;
         constexpr uint8_t Dout1 = 21;
         constexpr uint8_t AliveStatus = 19;
+        constexpr uint8_t NumPorts = 2;
+        constexpr uint8_t DefaultPort = 0;
     } // namespace LED
 
     namespace DIGITALIO
