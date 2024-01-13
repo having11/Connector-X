@@ -358,8 +358,7 @@ void requestEvent()
 
     case CommandType::GetPort:
     {
-        uint8_t msg = ledPort;
-        res.responseData.responseReadPort.msg = msg;
+        res.responseData.responseReadPort.msg = ledPort;
         break;
     }
 
