@@ -59,6 +59,11 @@ public:
         reset();
     }
 
+    uint32_t getCurrentColor()
+    {
+        return _curColor;
+    }
+
     bool setCurrentPattern(uint8_t pattern, uint16_t delay,
                            bool isOneShot = false)
     {

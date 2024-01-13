@@ -70,6 +70,14 @@ namespace CommandParser
         case CommandType::RadioGetLatestReceived:
             cmd->commandData.commandRadioGetLatestReceived = {};
             break;
+        
+        case CommandType::GetColor:
+            cmd->commandData.commandGetColor = {};
+            break;
+
+        case CommandType::GetPort:
+            cmd->commandData.commandGetPort = {};
+            break;
 
         default:
             break;

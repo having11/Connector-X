@@ -37,11 +37,8 @@ static Configuration config;
 static Configurator configurator;
 static uint8_t ledPort = 0;
 
-// TODO: Move these to an array
-static Adafruit_NeoPixel *pixels0;
-static Adafruit_NeoPixel *pixels1;
-static PatternRunner *patternRunner0;
-static PatternRunner *patternRunner1;
+static Adafruit_NeoPixel *pixels[Pin::LED::NumPorts];
+static PatternRunner *patternRunners[Pin::LED::NumPorts];
 
 #ifdef ENABLE_RADIO
 static PacketRadio *radio;
@@ -66,12 +63,12 @@ void setup()
 
     config = configurator.begin();
 
-    pixels0 = new Adafruit_NeoPixel(config.led0.count, Pin::LED::Dout0,
-                                    NEO_GRB + NEO_KHZ800);
-    pixels1 = new Adafruit_NeoPixel(config.led1.count, Pin::LED::Dout1,
-                                    NEO_GRB + NEO_KHZ800);
-    patternRunner0 = new PatternRunner(pixels0, Animation::patterns);
-    patternRunner1 = new PatternRunner(pixels1, Animation::patterns);
+    pixels[0] = new Adafruit_NeoPixel(config.led0.count, Pin::LED::Dout0,
+                                      NEO_GRB + NEO_KHZ800);
+    pixels[1] = new Adafruit_NeoPixel(config.led1.count, Pin::LED::Dout1,
+                                      NEO_GRB + NEO_KHZ800);
+    patternRunners[0] = new PatternRunner(pixels[0], Animation::patterns);
+    patternRunners[1] = new PatternRunner(pixels[1], Animation::patterns);
 
     // Peripherals
     initI2C0();
@@ -98,18 +95,17 @@ void setup()
         digitalWrite(pin.second, LOW);
     }
 
-    initPixels(pixels0, &config.led0);
-    initPixels(pixels1, &config.led1);
+    initPixels(pixels[0], &config.led0);
+    initPixels(pixels[1], &config.led1);
 
-    #ifdef ENABLE_RADIO
+#ifdef ENABLE_RADIO
     radio = new PacketRadio(&SPI1, config, handleRadioDataReceive);
 
     for (int i = 0; i < 2; i++)
     {
         radio->addTeam(config.initialTeams[i]);
     }
-    #endif
-
+#endif
 
     Serial.printf("Got config:\r\n%s\r\n",
                   Configurator::toString(config).c_str());
@@ -117,22 +113,22 @@ void setup()
 
 Adafruit_NeoPixel *getPixels(uint8_t port)
 {
-    if (port == 0)
+    if (port < Pin::LED::NumPorts)
     {
-        return pixels0;
+        return pixels[port];
     }
 
-    return pixels1;
+    return pixels[Pin::LED::DefaultPort];
 }
 
 PatternRunner *getPatternRunner(uint8_t port)
 {
-    if (port == 0)
+    if (port < Pin::LED::NumPorts)
     {
-        return patternRunner0;
+        return patternRunners[port];
     }
 
-    return patternRunner1;
+    return patternRunners[Pin::LED::DefaultPort];
 }
 
 void loop()
@@ -164,8 +160,10 @@ void loop()
         case CommandType::On:
         {
             // Go back to running the current color and pattern
-            patternRunner0->reset();
-            patternRunner1->reset();
+            for (int i = 0; i < Pin::LED::NumPorts; i++)
+            {
+                patternRunners[i]->reset();
+            }
             systemOn = true;
             break;
         }
@@ -265,8 +263,10 @@ void loop()
 
     if (systemOn)
     {
-        patternRunner0->update();
-        patternRunner1->update();
+        for (int i = 0; i < Pin::LED::NumPorts; i++)
+        {
+            patternRunners[i]->update();
+        }
     }
 
 #ifdef ENABLE_RADIO
@@ -347,6 +347,21 @@ void requestEvent()
         break;
     }
 
+    case CommandType::GetColor:
+    {
+        auto runner = getPatternRunner(ledPort);
+        uint32_t msg = runner->getCurrentColor();
+
+        res.responseData.responseReadColor.msg = msg;
+        break;
+    }
+
+    case CommandType::GetPort:
+    {
+        res.responseData.responseReadPort.msg = ledPort;
+        break;
+    }
+
     default:
         // Send back 255 (-1 signed) to indicate bad/no data
         Wire.write(0xff);
@@ -373,6 +388,12 @@ void centralRespond(Response response)
         break;
     case CommandType::ReadConfig:
         size = sizeof(ResponseReadConfiguration);
+        break;
+    case CommandType::GetColor:
+        size = sizeof(ResponseReadColor);
+        break;
+    case CommandType::GetPort:
+        size = sizeof(ResponseReadPort);
         break;
     default:
         size = 0;
