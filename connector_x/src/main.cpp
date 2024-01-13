@@ -352,13 +352,13 @@ void requestEvent()
         auto runner = getPatternRunner(ledPort);
         uint32_t msg = runner->getCurrentColor();
 
-        res.responseData.responseReadColor.msg = msg;
+        res.responseData.responseReadColor.color = msg;
         break;
     }
 
     case CommandType::GetPort:
     {
-        res.responseData.responseReadPort.msg = ledPort;
+        res.responseData.responseReadPort.port = ledPort;
         break;
     }
 
