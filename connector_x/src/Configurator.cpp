@@ -35,7 +35,7 @@ void Configurator::createConfig()
         ;
     config.teamNumber = Serial.parseInt();
     Serial.println(config.teamNumber);
-    Serial.print("I2C address for comms with RIO: ");
+    Serial.print("LED0 count: ");
     while (!Serial.available())
         ;
     config.led0.count = Serial.parseInt();
