@@ -71,6 +71,7 @@ void setup()
     patternRunners[1] = new PatternRunner(pixels[1], Animation::patterns);
 
     // Peripherals
+    delay(1000);
     initI2C0();
 
     SPI1.setTX(Pin::SPI::MOSI);
@@ -136,6 +137,7 @@ void loop()
     // If there's new data, process it
     if (newDataToParse)
     {
+        Serial.printf("Got new data\n");
         uint8_t buf[Pin::I2C::ReceiveBufSize];
         // Safely copy our new data
         noInterrupts();
@@ -418,11 +420,13 @@ void initI2C0(void)
         (addr1Val << 1) |
         (addr0Val);
 
+    Serial.printf("I2C address DEC=%d\n", i2cAddress);
+
     Wire.setSDA(Pin::I2C::Port0::SDA);
     Wire.setSCL(Pin::I2C::Port0::SCL);
     Wire.onReceive(receiveEvent); // register events
     Wire.onRequest(requestEvent);
-    Wire.begin(); // join i2c bus as slave
+    Wire.begin(i2cAddress); // join i2c bus as slave
 }
 
 void initPixels(Adafruit_NeoPixel *pixels, LedConfiguration *config)
