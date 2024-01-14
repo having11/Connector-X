@@ -304,6 +304,7 @@ void requestEvent()
 {
     Response res;
     res.commandType = command.commandType;
+    // Serial.printf("Sending back command=%d\n", (uint8_t)res.commandType);
 
     switch (command.commandType)
     {
