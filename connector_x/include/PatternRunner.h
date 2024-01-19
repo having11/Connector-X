@@ -1,6 +1,6 @@
 #pragma once
 
-#include <Adafruit_NeoPixel.h>
+#include <FastLED.h>
 #include <Arduino.h>
 
 #include "Constants.h"
@@ -11,9 +11,10 @@ class PatternRunner
 public:
     PatternRunner() {}
 
-    PatternRunner(Adafruit_NeoPixel *strip, Pattern *patterns,
+    PatternRunner(CRGB *strip, Pattern *patterns, uint8_t port, uint8_t brightness,
                   uint8_t numPatterns = PatternCount)
-        : _pixels(strip), _patternArr(patterns), _numPatterns(numPatterns),
+        : _pixels(strip), _patternArr(patterns), _port(port), _brightness(brightness),
+            _numPatterns(numPatterns),
           _curPattern(0), _curState(0), _oneShot(false), _doneRunning(false),
           _curColor((0)), _lastUpdate(0) {}
 
@@ -57,6 +58,7 @@ public:
     {
         _curColor = color;
         reset();
+        update(true);
     }
 
     uint32_t getCurrentColor()
@@ -121,21 +123,23 @@ private:
 
     void incrementState(Pattern *curPattern)
     {
-        if (curPattern->cb(*_pixels, _curColor, _curState, _pixels->numPixels()))
+        if (curPattern->cb(_pixels, _curColor, _curState, FastLED[_port].size()))
         {
-            _pixels->show();
+            FastLED[_port].showLeds(_brightness);
         }
 
         _curState++;
         _lastUpdate = millis();
     }
 
-    Adafruit_NeoPixel *_pixels;
+    CRGB *_pixels;
     Pattern *_patternArr;
     uint8_t _numPatterns;
     uint8_t _curPattern;
+    uint8_t _brightness;
     uint16_t _curState;
     uint16_t _delay;
+    uint8_t _port;
     bool _oneShot;
     bool _doneRunning;
     uint32_t _curColor;

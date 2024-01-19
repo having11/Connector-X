@@ -2,13 +2,13 @@
 
 Configuration Configurator::begin()
 {
-    pinMode(Pin::CONFIG::ConfigSetupBtn, INPUT_PULLUP);
-    pinMode(Pin::CONFIG::ConfigLed, OUTPUT);
+    pinMode(PinConstants::CONFIG::ConfigSetupBtn, INPUT_PULLUP);
+    pinMode(PinConstants::CONFIG::ConfigLed, OUTPUT);
 
     if (!checkIfValid() ||
-        !digitalRead(Pin::CONFIG::ConfigSetupBtn))
+        !digitalRead(PinConstants::CONFIG::ConfigSetupBtn))
     {
-        digitalWrite(Pin::CONFIG::ConfigLed, HIGH);
+        digitalWrite(PinConstants::CONFIG::ConfigLed, HIGH);
         while (!Serial)
             ;
         delay(1000);
@@ -16,7 +16,7 @@ Configuration Configurator::begin()
         createConfig();
     }
 
-    digitalWrite(Pin::CONFIG::ConfigLed, LOW);
+    digitalWrite(PinConstants::CONFIG::ConfigLed, LOW);
 
     return readConfig();
 }

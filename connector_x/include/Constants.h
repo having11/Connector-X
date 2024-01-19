@@ -4,11 +4,11 @@
 #include <RFM69.h>
 #include <unordered_map>
 
-namespace Pin
+namespace PinConstants
 {
     namespace I2C
     {
-        constexpr uint8_t ReceiveBufSize = 128u;
+        constexpr uint8_t ReceiveBufSize = 16u;
         namespace Port0
         {
             constexpr uint8_t BaseAddress = 0b0010000;

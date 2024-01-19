@@ -24,21 +24,21 @@ void requestEvent(void);
 void handleRadioDataReceive(Message msg);
 void centralRespond(Response response);
 void initI2C0(void);
-void initPixels(Adafruit_NeoPixel *pixels, LedConfiguration *config);
+void initPixels(LedConfiguration *config, uint8_t port);
 
-Adafruit_NeoPixel *getPixels(uint8_t port);
+CRGB *getPixels(uint8_t port);
 PatternRunner *getPatternRunner(uint8_t port);
 
-static volatile uint8_t receiveBuf[Pin::I2C::ReceiveBufSize];
+static volatile uint8_t receiveBuf[PinConstants::I2C::ReceiveBufSize];
 static volatile bool newData = false;
 static volatile bool newDataToParse = false;
 
 static Configuration config;
 static Configurator configurator;
-static uint8_t ledPort = 0;
+static volatile uint8_t ledPort = 0;
 
-static Adafruit_NeoPixel *pixels[Pin::LED::NumPorts];
-static PatternRunner *patternRunners[Pin::LED::NumPorts];
+static CRGB *pixels[PinConstants::LED::NumPorts];
+static PatternRunner *patternRunners[PinConstants::LED::NumPorts];
 
 #ifdef ENABLE_RADIO
 static PacketRadio *radio;
@@ -46,58 +46,53 @@ static PacketRadio *radio;
 
 static Command command;
 
-static bool systemOn = true;
+static volatile bool systemOn = true;
 
 void setup()
 {
-    pinMode(Pin::LED::AliveStatus, OUTPUT);
-    digitalWrite(Pin::LED::AliveStatus, HIGH);
+    pinMode(PinConstants::LED::AliveStatus, OUTPUT);
+    digitalWrite(PinConstants::LED::AliveStatus, HIGH);
 
-    Wire1.setSDA(Pin::I2C::Port1::SDA);
-    Wire1.setSCL(Pin::I2C::Port1::SCL);
+    Wire1.setSDA(PinConstants::I2C::Port1::SDA);
+    Wire1.setSCL(PinConstants::I2C::Port1::SCL);
     Wire1.begin();
 
-    EEPROM.begin(Pin::CONFIG::EepromSize);
+    EEPROM.begin(PinConstants::CONFIG::EepromSize);
 
     Serial.begin(UartBaudRate);
 
     config = configurator.begin();
 
-    pixels[0] = new Adafruit_NeoPixel(config.led0.count, Pin::LED::Dout0,
-                                      NEO_GRB + NEO_KHZ800);
-    pixels[1] = new Adafruit_NeoPixel(config.led1.count, Pin::LED::Dout1,
-                                      NEO_GRB + NEO_KHZ800);
-    patternRunners[0] = new PatternRunner(pixels[0], Animation::patterns);
-    patternRunners[1] = new PatternRunner(pixels[1], Animation::patterns);
-
     // Peripherals
     delay(1000);
     initI2C0();
+    Serial.println("I20 init done");
 
-    SPI1.setTX(Pin::SPI::MOSI);
-    SPI1.setRX(Pin::SPI::MISO);
-    SPI1.setSCK(Pin::SPI::CLK);
-    SPI1.setCS(Pin::SPI::CS0);
+    SPI1.setTX(PinConstants::SPI::MOSI);
+    SPI1.setRX(PinConstants::SPI::MISO);
+    SPI1.setSCK(PinConstants::SPI::CLK);
+    SPI1.setCS(PinConstants::SPI::CS0);
     SPI1.begin();
 
-    Serial1.setTX(Pin::UART::TX);
-    Serial1.setRX(Pin::UART::RX);
+    Serial1.setTX(PinConstants::UART::TX);
+    Serial1.setRX(PinConstants::UART::RX);
     Serial1.begin(UartBaudRate);
 
     mutex_init(&i2cCommandMtx);
     mutex_init(&radioDataMtx);
 
-    pinMode(Pin::SPI::CS0, OUTPUT);
-    digitalWrite(Pin::SPI::CS0, HIGH);
+    pinMode(PinConstants::SPI::CS0, OUTPUT);
+    digitalWrite(PinConstants::SPI::CS0, HIGH);
 
-    for (auto pin : Pin::DIGITALIO::digitalIOMap)
+    for (auto pin : PinConstants::DIGITALIO::digitalIOMap)
     {
         pinMode(pin.second, OUTPUT);
         digitalWrite(pin.second, LOW);
     }
 
-    initPixels(pixels[0], &config.led0);
-    initPixels(pixels[1], &config.led1);
+    Serial.println("Initializing pixels");
+    initPixels(&config.led0, 0);
+    initPixels(&config.led1, 1);
 
 #ifdef ENABLE_RADIO
     radio = new PacketRadio(&SPI1, config, handleRadioDataReceive);
@@ -112,24 +107,131 @@ void setup()
                   Configurator::toString(config).c_str());
 }
 
-Adafruit_NeoPixel *getPixels(uint8_t port)
+void setup1()
 {
-    if (port < Pin::LED::NumPorts)
+    delay(5000);
+    Serial.println("Setup1 has ended");
+}
+
+void loop1()
+{
+    if (rp2040.fifo.available())
+    {
+        uint8_t toReadCount;
+        uint32_t value = rp2040.fifo.pop();
+        while ((value >> 24) & 0xFF != 254 && rp2040.fifo.available())
+        {
+            Serial.println("Popped");
+            value = rp2040.fifo.pop();
+        }
+
+        toReadCount = (value >> 16) & 0xFF;
+        uint32_t buf[toReadCount];
+
+        for (uint8_t i = 0; i < toReadCount; i++)
+        {
+            buf[i] = rp2040.fifo.pop();
+        }
+
+        Serial.printf("[Core 1] Data buffer=\t");
+        for (int i = 0; i < toReadCount; i++)
+        {
+            Serial.printf("%lX ", buf[toReadCount]);
+        }
+        Serial.println();
+
+        CommandType type = (CommandType)buf[0];
+
+        switch (type)
+        {
+            case CommandType::On:
+            {
+                Serial.println("Switching to on");
+                // Go back to running the current color and pattern
+                for (int i = 0; i < PinConstants::LED::NumPorts; i++)
+                {
+                    patternRunners[i]->reset();
+                }
+                systemOn = true;
+                break;
+            }
+
+            case CommandType::Off:
+            {
+                Serial.println("Switching to off");
+                // Set LEDs to black and stop running the pattern
+                for (uint8_t port = 0; port < 2; port++)
+                {
+                    auto pixels = getPixels(ledPort);
+                    Animation::executePatternSetAll(pixels, 0, 0, FastLED[port].size());
+                    FastLED[port].showLeds();
+                }
+                systemOn = false;
+                break;
+            }
+
+            case CommandType::Pattern:
+            {
+                Serial.println("Pattern");
+                // To set everything to a certain color, change color then call
+                // the 'set all' pattern
+                auto runner = getPatternRunner(ledPort);
+                CommandPattern data;
+                memcpy(&data, buf + 1, sizeof(uint32_t));
+
+                uint16_t delay =
+                    data.delay == -1
+                        ? runner->getPattern(data.pattern)
+                            ->changeDelayDefault
+                        : data.delay;
+
+                runner->setCurrentPattern(data.pattern,
+                                        delay,
+                                        data.oneShot);
+                break;
+            }
+
+            case CommandType::ChangeColor:
+            {
+                auto runner = getPatternRunner(ledPort);
+                CommandColor data;
+                memcpy(&data, buf + 1, sizeof(CommandColor));
+
+                Serial.printf("Color=%d|%d|%d\n", data.red, data.green, data.blue);
+                runner->setCurrentColor(
+                    (uint32_t)CRGB(data.red, data.green, data.blue));
+                break;
+            }
+        }
+    }
+
+    if (systemOn)
+    {
+        for (int i = 0; i < PinConstants::LED::NumPorts; i++)
+        {
+            patternRunners[i]->update();
+        }
+    }
+}
+
+CRGB *getPixels(uint8_t port)
+{
+    if (port < PinConstants::LED::NumPorts)
     {
         return pixels[port];
     }
 
-    return pixels[Pin::LED::DefaultPort];
+    return pixels[PinConstants::LED::DefaultPort];
 }
 
 PatternRunner *getPatternRunner(uint8_t port)
 {
-    if (port < Pin::LED::NumPorts)
+    if (port < PinConstants::LED::NumPorts)
     {
         return patternRunners[port];
     }
 
-    return patternRunners[Pin::LED::DefaultPort];
+    return patternRunners[PinConstants::LED::DefaultPort];
 }
 
 void loop()
@@ -138,12 +240,16 @@ void loop()
     if (newDataToParse)
     {
         Serial.printf("Got new data\n");
-        uint8_t buf[Pin::I2C::ReceiveBufSize];
-        // Safely copy our new data
-        noInterrupts();
-        memcpy(buf, (const void *)receiveBuf, Pin::I2C::ReceiveBufSize);
-        interrupts();
-        CommandParser::parseCommand(buf, Pin::I2C::ReceiveBufSize, &command);
+        uint8_t buf[PinConstants::I2C::ReceiveBufSize];
+        // Copy our new data
+        memcpy(buf, (const void *)receiveBuf, PinConstants::I2C::ReceiveBufSize);
+        Serial.printf("Rec data buffer=\t");
+        for (int i = 0; i < 16; i++)
+        {
+            Serial.printf("%X ", receiveBuf[i]);
+        }
+        Serial.println();
+        CommandParser::parseCommand(buf, PinConstants::I2C::ReceiveBufSize, &command);
 
         newDataToParse = false;
         newData = true;
@@ -152,20 +258,21 @@ void loop()
     if (newData)
     {
         newData = false;
-        for (int i = 0; i < sizeof(command); i++)
-        {
-            Serial.printf("%X ", ((uint8_t *)&command)[i]);
-        }
-        Serial.println();
+        // Serial.printf("Command struct=\t");
+        // for (int i = 0; i < sizeof(command); i++)
+        // {
+        //     Serial.printf("%X ", ((uint8_t *)&command)[i]);
+        // }
+        // Serial.println();
         switch (command.commandType)
         {
         case CommandType::On:
         {
             // Go back to running the current color and pattern
-            for (int i = 0; i < Pin::LED::NumPorts; i++)
-            {
-                patternRunners[i]->reset();
-            }
+            rp2040.fifo.push(0xFE010000);
+            uint32_t val;
+            memcpy(&val, &command.commandType, sizeof(CommandType));
+            rp2040.fifo.push(val);
             systemOn = true;
             break;
         }
@@ -173,12 +280,10 @@ void loop()
         case CommandType::Off:
         {
             // Set LEDs to black and stop running the pattern
-            for (uint8_t port = 0; port < 2; port++)
-            {
-                auto pixels = getPixels(ledPort);
-                Animation::executePatternSetAll(*pixels, 0, 0, pixels->numPixels());
-                pixels->show();
-            }
+            rp2040.fifo.push(0xFE010000);
+            uint32_t val;
+            memcpy(&val, &command.commandType, sizeof(CommandType));
+            rp2040.fifo.push(val);
             systemOn = false;
             break;
         }
@@ -187,25 +292,23 @@ void loop()
         {
             // To set everything to a certain color, change color then call
             // the 'set all' pattern
-            auto runner = getPatternRunner(ledPort);
-            uint16_t delay =
-                command.commandData.commandPattern.delay == -1
-                    ? runner->getPattern(command.commandData.commandPattern.pattern)
-                          ->changeDelayDefault
-                    : command.commandData.commandPattern.delay;
-
-            runner->setCurrentPattern(command.commandData.commandPattern.pattern,
-                                      delay,
-                                      command.commandData.commandPattern.oneShot);
+            rp2040.fifo.push(0xFE020000);
+            uint32_t val;
+            memcpy(&val, &command.commandType, sizeof(CommandType));
+            rp2040.fifo.push(val);
+            memcpy(&val, &command.commandData.commandPattern, sizeof(CommandPattern));
+            rp2040.fifo.push(val);
             break;
         }
 
         case CommandType::ChangeColor:
         {
-            auto runner = getPatternRunner(ledPort);
-            auto colors = command.commandData.commandColor;
-            runner->setCurrentColor(
-                Adafruit_NeoPixel::Color(colors.red, colors.green, colors.blue));
+            rp2040.fifo.push(0xFE020000);
+            uint32_t val;
+            memcpy(&val, &command.commandType, sizeof(CommandType));
+            rp2040.fifo.push(val);
+            memcpy(&val, &command.commandData.commandColor, sizeof(CommandColor));
+            rp2040.fifo.push(val);
             break;
         }
 
@@ -218,7 +321,7 @@ void loop()
         case CommandType::DigitalSetup:
         {
             auto cfg = command.commandData.commandDigitalSetup;
-            auto pin = Pin::DIGITALIO::digitalIOMap.at(cfg.port);
+            auto pin = PinConstants::DIGITALIO::digitalIOMap.at(cfg.port);
             pinMode(pin, cfg.mode);
             break;
         }
@@ -226,7 +329,7 @@ void loop()
         case CommandType::DigitalWrite:
         {
             auto cfg = command.commandData.commandDigitalWrite;
-            auto pin = Pin::DIGITALIO::digitalIOMap.at(cfg.port);
+            auto pin = PinConstants::DIGITALIO::digitalIOMap.at(cfg.port);
             digitalWrite(pin, cfg.value);
             break;
         }
@@ -261,14 +364,6 @@ void loop()
 
         Serial.print(F("ON="));
         Serial.println(systemOn);
-    }
-
-    if (systemOn)
-    {
-        for (int i = 0; i < Pin::LED::NumPorts; i++)
-        {
-            patternRunners[i]->update();
-        }
     }
 
 #ifdef ENABLE_RADIO
@@ -325,7 +420,7 @@ void requestEvent()
      */
     case CommandType::DigitalRead:
     {
-        uint8_t value = digitalRead(Pin::DIGITALIO::digitalIOMap.at(
+        uint8_t value = digitalRead(PinConstants::DIGITALIO::digitalIOMap.at(
             command.commandData.commandDigitalRead.port));
         res.responseData.responseDigitalRead.value = value;
         break;
@@ -408,36 +503,50 @@ void centralRespond(Response response)
 
 void initI2C0(void)
 {
-    pinMode(Pin::I2C::Port0::AddrSwPin0, INPUT_PULLUP);
-    uint8_t addr0Val = digitalRead(Pin::I2C::Port0::AddrSwPin0) == HIGH ? 1 : 0;
-    pinMode(Pin::I2C::Port0::AddrSwPin1, INPUT_PULLUP);
-    uint8_t addr1Val = digitalRead(Pin::I2C::Port0::AddrSwPin1) == HIGH ? 1 : 0;
-    pinMode(Pin::I2C::Port0::AddrSwPin2, INPUT_PULLUP);
-    uint8_t addr2Val = digitalRead(Pin::I2C::Port0::AddrSwPin2) == HIGH ? 1 : 0;
+    pinMode(PinConstants::I2C::Port0::AddrSwPin0, INPUT_PULLUP);
+    uint8_t addr0Val = digitalRead(PinConstants::I2C::Port0::AddrSwPin0) == HIGH ? 1 : 0;
+    pinMode(PinConstants::I2C::Port0::AddrSwPin1, INPUT_PULLUP);
+    uint8_t addr1Val = digitalRead(PinConstants::I2C::Port0::AddrSwPin1) == HIGH ? 1 : 0;
+    pinMode(PinConstants::I2C::Port0::AddrSwPin2, INPUT_PULLUP);
+    uint8_t addr2Val = digitalRead(PinConstants::I2C::Port0::AddrSwPin2) == HIGH ? 1 : 0;
 
     uint8_t i2cAddress =
-        Pin::I2C::Port0::BaseAddress |
+        PinConstants::I2C::Port0::BaseAddress |
         (addr2Val << 2) |
         (addr1Val << 1) |
         (addr0Val);
 
     Serial.printf("I2C address DEC=%d\n", i2cAddress);
 
-    Wire.setSDA(Pin::I2C::Port0::SDA);
-    Wire.setSCL(Pin::I2C::Port0::SCL);
+    Wire.setSDA(PinConstants::I2C::Port0::SDA);
+    Wire.setSCL(PinConstants::I2C::Port0::SCL);
     Wire.onReceive(receiveEvent); // register events
     Wire.onRequest(requestEvent);
     Wire.begin(i2cAddress); // join i2c bus as slave
 }
 
-void initPixels(Adafruit_NeoPixel *pixels, LedConfiguration *config)
+void initPixels(LedConfiguration *config, uint8_t port)
 {
-    pixels->begin();
-    pixels->setBrightness(config->brightness);
-    pixels->setPixelColor(0, Adafruit_NeoPixel::Color(255, 127, 31));
-    pixels->show();
+    Serial.println("Pixel start");
+    auto* strip = new CRGB[config->count];
+    pixels[port] = strip;
+
+    if (port == 0)
+    {
+        FastLED.addLeds<WS2812, PinConstants::LED::Dout0, RGB>(strip, config->count);
+    }
+    else if (port == 1)
+    {
+        FastLED.addLeds<WS2812, PinConstants::LED::Dout1, GRB>(strip, config->count);
+    }
+
+    patternRunners[port] = new PatternRunner(strip, Animation::patterns,
+        port, config->brightness, PatternCount);
+    strip[0] = CRGB(255, 127, 31);
+    FastLED[port].showLeds();
     delay(1000);
     // Initialize all LEDs to black
-    Animation::executePatternSetAll(*pixels, 0, 0, pixels->numPixels());
-    pixels->show();
+    Animation::executePatternSetAll(strip, 0, 0, FastLED[port].size());
+    FastLED[port].showLeds();
+    Serial.println("Pixel end");
 }

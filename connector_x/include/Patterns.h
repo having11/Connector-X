@@ -1,6 +1,6 @@
 #pragma once
 
-#include <Adafruit_NeoPixel.h>
+#include <FastLED.h>
 
 #include "Constants.h"
 
@@ -9,7 +9,7 @@
  * @param state resets to 0 after current state >= numStates
  * @returns true if LEDs should show
  */
-typedef bool (*ExecutePatternCallback)(Adafruit_NeoPixel &strip, uint32_t color,
+typedef bool (*ExecutePatternCallback)(CRGB *strip, uint32_t color,
                                        uint16_t state, uint16_t ledCount);
 
 enum class PatternType
@@ -30,9 +30,9 @@ struct Pattern
     ExecutePatternCallback cb;
 };
 
-void setColorScaled(Adafruit_NeoPixel &pixels, uint16_t ledNumber, byte red, byte green, byte blue, byte scaling) {
+void setColorScaled(CRGB *strip, uint16_t ledNumber, byte red, byte green, byte blue, byte scaling) {
     // Scale RGB with a common brightness parameter
-    pixels.setPixelColor(ledNumber, (red * scaling) >> 8, (green * scaling) >> 8, (blue * scaling) >> 8);
+    strip[ledNumber] = CRGB((red * scaling) >> 8, (green * scaling) >> 8, (blue * scaling) >> 8);
 }
 
 namespace Animation
@@ -41,35 +41,35 @@ namespace Animation
     {
         if (position < 85)
         {
-            return Adafruit_NeoPixel::Color(position * 3, 255 - position * 3, 0);
+            return (uint32_t)CRGB(position * 3, 255 - position * 3, 0);
         }
         else if (position < 170)
         {
             position -= 85;
-            return Adafruit_NeoPixel::Color(255 - position * 3, 0, position * 3);
+            return (uint32_t)CRGB(255 - position * 3, 0, position * 3);
         }
-        return Adafruit_NeoPixel::Color(0, position * 3, 255 - position * 3);
+        return (uint32_t)CRGB(0, position * 3, 255 - position * 3);
     }
     // The function signature comes from ExecutePatternCallback in Patterns.h
 
-    static bool executePatternNone(Adafruit_NeoPixel &strip, uint32_t color,
+    static bool executePatternNone(CRGB *strip, uint32_t color,
                                    uint16_t state, uint16_t ledCount)
     {
         return false;
     }
 
-    static bool executePatternSetAll(Adafruit_NeoPixel &strip, uint32_t color,
+    static bool executePatternSetAll(CRGB *strip, uint32_t color,
                                      uint16_t state, uint16_t ledCount)
     {
         for (size_t i = 0; i < ledCount; i++)
         {
-            strip.setPixelColor(i, color);
+            strip[i] = color;
         }
 
         return true;
     }
 
-    static bool executePatternBlink(Adafruit_NeoPixel &strip, uint32_t color,
+    static bool executePatternBlink(CRGB *strip, uint32_t color,
                                     uint16_t state, uint16_t ledCount)
     {
         switch (state)
@@ -77,14 +77,14 @@ namespace Animation
         case 0:
             for (size_t i = 0; i < ledCount; i++)
             {
-                strip.setPixelColor(i, color);
+                strip[i] = color;
             }
             return true;
 
         case 1:
             for (size_t i = 0; i < ledCount; i++)
             {
-                strip.setPixelColor(i, 0);
+                strip[i] = 0;
             }
             return true;
 
@@ -93,27 +93,27 @@ namespace Animation
         }
     }
 
-    static bool executePatternRGBFade(Adafruit_NeoPixel &strip, uint32_t color,
+    static bool executePatternRGBFade(CRGB *strip, uint32_t color,
                                       uint16_t state, uint16_t ledCount)
     {
         for (size_t i = 0; i < ledCount; i++)
         {
-            strip.setPixelColor(i, Wheel(((i * 256 / ledCount) + state) & 255));
+            strip[i] = Wheel(((i * 256 / ledCount) + state) & 255);
         }
         return true;
     }
 
-    static bool executePatternHackerMode(Adafruit_NeoPixel &strip, uint32_t color,
+    static bool executePatternHackerMode(CRGB *strip, uint32_t color,
                                          uint16_t state, uint16_t ledCount)
     {
         switch (state)
         {
         case 0:
-            return executePatternSetAll(strip, Adafruit_NeoPixel::Color(0, 200, 0), 0,
+            return executePatternSetAll(strip, (uint32_t)CRGB(0, 200, 0), 0,
                                         ledCount);
 
         case 1:
-            return executePatternSetAll(strip, Adafruit_NeoPixel::Color(5, 100, 5), 0,
+            return executePatternSetAll(strip, (uint32_t)CRGB(5, 100, 5), 0,
                                         ledCount);
 
         default:
@@ -121,7 +121,7 @@ namespace Animation
         }
     }
 
-    static bool executePatternBreathing(Adafruit_NeoPixel &strip, uint32_t color,
+    static bool executePatternBreathing(CRGB *strip, uint32_t color,
                                         uint16_t state, uint16_t ledCount)
     {
         if (state > 255)
@@ -160,6 +160,6 @@ namespace Animation
          .cb = Animation::executePatternHackerMode},
         {.type = PatternType::Breathing,
         .numStates = 512u,
-        .changeDelayDefault = 15,
+        .changeDelayDefault = 5,
         .cb = Animation::executePatternBreathing}};
 } // namespace Animation
