@@ -2,25 +2,27 @@
 
 PatternZone::PatternZone(uint16_t ledCount, uint16_t zoneCount)
 {
-    _zones.reserve(zoneCount);
     uint16_t ledCountPerLength = ledCount / zoneCount;
+    _zones = std::make_unique<std::vector<ZoneDefinition>>();
 
     for (uint16_t i = 0; i < zoneCount; i++)
     {
         uint16_t offset = getOffsetFromLength(i, ledCountPerLength);
 
-        _zones[i] = { .offset = offset, .count = ledCountPerLength };
+        _zones->push_back({ .offset = offset, .count = ledCountPerLength });
     }
+
+    Serial.printf("Zone size=%d\r\n", _zones->size());
 }
 
 PatternZone::PatternZone(const std::vector<ZoneDefinition> &zones)
 {
-    _zones = zones;
+    *_zones = zones;
 }
 
 bool PatternZone::setRunZone(RunZone zone)
 {
-    if (zone.index > _zones.size())
+    if (zone.index > _zones->size())
     {
         return false;
     }
@@ -32,7 +34,7 @@ bool PatternZone::setRunZone(RunZone zone)
 bool PatternZone::runPattern(Pattern *pattern, CRGB* pixels,
             uint32_t color, uint16_t state)
 {
-    auto curZone = _zones[_runZone.index];
+    auto curZone = _zones->at(_runZone.index);
     CRGB tempLeds[curZone.count];
     
     bool shouldShow = pattern->cb(tempLeds, color, state, curZone.count);

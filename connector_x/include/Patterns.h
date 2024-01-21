@@ -30,7 +30,7 @@ struct Pattern
     ExecutePatternCallback cb;
 };
 
-void setColorScaled(CRGB *strip, uint16_t ledNumber, byte red, byte green, byte blue, byte scaling)
+static void setColorScaled(CRGB *strip, uint16_t ledNumber, byte red, byte green, byte blue, byte scaling)
 {
     // Scale RGB with a common brightness parameter
     strip[ledNumber] = CRGB((red * scaling) >> 8, (green * scaling) >> 8, (blue * scaling) >> 8);

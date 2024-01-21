@@ -7,6 +7,7 @@
 #include "Patterns.h"
 
 #include <vector>
+#include <memory>
 
 struct ZoneDefinition {
     uint16_t offset;
@@ -48,10 +49,12 @@ class PatternZone {
         bool runPattern(Pattern *pattern, CRGB* pixels,
             uint32_t color, uint16_t state);
 
+        std::unique_ptr<std::vector<ZoneDefinition>> _zones;
+
     private:
         inline ZoneDefinition getZoneFromIndex(uint16_t index)
         {
-            return _zones[index];
+            return _zones->at(index);
         }
 
         inline uint16_t getOffsetFromLength(uint16_t index, uint16_t ledCountPerLength)
@@ -60,5 +63,4 @@ class PatternZone {
         }
 
         RunZone _runZone{0, false};
-        std::vector<ZoneDefinition> _zones;
 };
