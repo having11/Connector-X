@@ -198,11 +198,14 @@ void loop1()
                 break;
             }
         }
+
+        // zones[1]->updateZones();
     }
 
     if (systemOn)
     {
         zones[1]->updateZones();
+        // FastLED[1].showLeds(20);
         // for (int i = 0; i < PinConstants::LED::NumPorts; i++)
         // {
         //     // Serial.printf("Updating leds for port=%d\r\n", i);
@@ -537,6 +540,7 @@ void initPixels(LedConfiguration *config, uint8_t port)
 
     Serial.printf("zones size=%d\r\n", zones[port]->_zones->size());
 
+    FastLED[port].clearLedData();
     strip[0] = CRGB(255, 127, 31);
     FastLED[port].showLeds();
     delay(1000);

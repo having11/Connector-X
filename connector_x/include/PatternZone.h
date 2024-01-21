@@ -8,10 +8,20 @@
 
 #include <vector>
 #include <memory>
+#include <string>
 
 struct ZoneDefinition {
     uint16_t offset;
     uint16_t count;
+
+    inline std::string toString()
+    {
+        std::string str = "Offset: ";
+        str += std::to_string(offset) + "\t";
+        str += "count: " + std::to_string(count) + "\n";
+
+        return str;
+    }
 };
 
 struct RunZone {
@@ -57,7 +67,7 @@ struct RunZone {
         patternIndex = 0;
     }
 
-    inline bool shouldUpdate() const
+    bool shouldUpdate() const
     {
         // Only update if enough delay has passed and pattern can be run again
         return (millis() - lastUpdateMs >= delay) && !(oneShot && doneRunning);
@@ -110,7 +120,7 @@ class PatternZone {
         std::unique_ptr<std::vector<ZoneDefinition>> _zones;
 
     private:
-        inline ZoneDefinition getZoneDefinitionFromIndex(uint16_t index)
+        inline ZoneDefinition& getZoneDefinitionFromIndex(uint16_t index)
         {
             return _zones->at(index);
         }
