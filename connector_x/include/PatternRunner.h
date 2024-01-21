@@ -5,6 +5,7 @@
 
 #include "Constants.h"
 #include "Patterns.h"
+#include "PatternZone.h"
 
 class PatternRunner
 {
@@ -12,7 +13,7 @@ public:
     PatternRunner() {}
 
     PatternRunner(CRGB *strip, Pattern *patterns, uint8_t port, uint8_t brightness,
-                  uint8_t numPatterns = PatternCount)
+                  PatternZone *zone, uint8_t numPatterns = PatternCount)
         : _pixels(strip), _patternArr(patterns), _port(port), _brightness(brightness),
             _numPatterns(numPatterns),
           _curPattern(0), _curState(0), _oneShot(false), _doneRunning(false),
@@ -54,10 +55,19 @@ public:
         }
     }
 
+    void changePatternZone(PatternZone *newZone)
+    {
+        _zone = newZone;
+    }
+
+    void setZoneRun(RunZone runZone)
+    {
+        _zone->setRunZone(runZone);
+    }
+
     void setCurrentColor(uint32_t color)
     {
         _curColor = color;
-        reset();
         update(true);
     }
 
@@ -67,7 +77,7 @@ public:
     }
 
     bool setCurrentPattern(uint8_t pattern, uint16_t delay,
-                           bool isOneShot = false)
+                           bool isOneShot = false, uint16_t zoneIndex = 0)
     {
         if (pattern > PatternCount - 1)
         {
@@ -79,8 +89,8 @@ public:
         _delay = delay;
         reset();
 
-        Serial.printf("Set pattern to %d | one shot=%d | delay=%d\r\n", pattern,
-                      isOneShot, delay);
+        Serial.printf("Set pattern to %d | one shot=%d | delay=%d | zone=%d\r\n", pattern,
+                      isOneShot, delay, zoneIndex);
 
         // Force the newly set pattern to run immediately
         update(true);
@@ -89,9 +99,9 @@ public:
     }
 
     bool setCurrentPattern(PatternType type, uint16_t delay,
-                           bool isOneShot = false)
+                           bool isOneShot = false, uint16_t zoneIndex = 0)
     {
-        return setCurrentPattern((uint8_t)type, delay, isOneShot);
+        return setCurrentPattern((uint8_t)type, delay, isOneShot, zoneIndex);
     }
 
     /**
@@ -123,10 +133,14 @@ private:
 
     void incrementState(Pattern *curPattern)
     {
-        if (curPattern->cb(_pixels, _curColor, _curState, FastLED[_port].size()))
+        if (_zone->runPattern(curPattern, _pixels, _curColor, _curState))
         {
             FastLED[_port].showLeds(_brightness);
         }
+        // if (curPattern->cb(_pixels, _curColor, _curState, FastLED[_port].size()))
+        // {
+        //     FastLED[_port].showLeds(_brightness);
+        // }
 
         _curState++;
         _lastUpdate = millis();
@@ -134,6 +148,7 @@ private:
 
     CRGB *_pixels;
     Pattern *_patternArr;
+    PatternZone *_zone;
     uint8_t _numPatterns;
     uint8_t _curPattern;
     uint8_t _brightness;

@@ -35,7 +35,10 @@ enum class CommandType
     // R
     GetColor = 14,
     // R
-    GetPort = 15
+    GetPort = 15,
+    // TODO: Set several pattern zones at once to run in parallel
+    // W
+    SetPatternZone = 16,
 };
 
 struct CommandOn
@@ -52,6 +55,7 @@ struct CommandPattern
     uint8_t pattern;
     uint8_t oneShot;
     int16_t delay;
+    uint16_t zoneIndex;
 };
 
 struct CommandColor
@@ -123,6 +127,13 @@ struct CommandGetPort
 {
 };
 
+struct CommandSetPatternZone
+{
+    uint16_t zoneIndex;
+    // if non-zero, will go from end pixel to start pixel
+    uint8_t reversed;
+};
+
 union CommandData
 {
     CommandOn commandOn;
@@ -140,6 +151,7 @@ union CommandData
     CommandRadioGetLatestReceived commandRadioGetLatestReceived;
     CommandGetColor commandGetColor;
     CommandGetPort commandGetPort;
+    CommandSetPatternZone commandSetPatternZone;
 };
 
 struct Command

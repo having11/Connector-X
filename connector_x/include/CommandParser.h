@@ -79,6 +79,11 @@ namespace CommandParser
             cmd->commandData.commandGetPort = {};
             break;
 
+        case CommandType::SetPatternZone:
+            memcpy(&cmd->commandData.commandSetPatternZone.zoneIndex, &buf[1],
+                sizeof(CommandSetPatternZone));
+            break;
+
         default:
             break;
         }
