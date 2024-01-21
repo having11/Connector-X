@@ -12,7 +12,7 @@
 #include "Configurator.h"
 #include "Constants.h"
 #include "PacketRadio.h"
-#include "PatternRunner.h"
+#include "PatternZone.h"
 
 #include <memory>
 
@@ -31,7 +31,7 @@ void initI2C0(void);
 void initPixels(LedConfiguration *config, uint8_t port);
 
 CRGB *getPixels(uint8_t port);
-PatternRunner *getPatternRunner(uint8_t port);
+// PatternRunner *getPatternRunner(uint8_t port);
 
 static volatile uint8_t receiveBuf[PinConstants::I2C::ReceiveBufSize];
 static volatile bool newData = false;
@@ -44,7 +44,7 @@ static volatile uint8_t ledPort = 0;
 static CRGB *pixels[PinConstants::LED::NumPorts];
 // TODO: Make this an array of arrays -> Each port can have multiple zones
 static std::unique_ptr<PatternZone> zones[PinConstants::LED::NumPorts];
-static PatternRunner *patternRunners[PinConstants::LED::NumPorts];
+// static PatternRunner *patternRunners[PinConstants::LED::NumPorts];
 
 #ifdef ENABLE_RADIO
 static PacketRadio *radio;
@@ -117,10 +117,6 @@ void setup1()
 {
     delay(5000);
     Serial.println("Setup1 has ended");
-    patternRunners[0]->changePatternZone(zones[0].get());
-    patternRunners[1]->changePatternZone(zones[1].get());
-
-    Serial.printf("Zone 1 size=%d\r\n", zones[1]->_zones->size());
 }
 
 void loop1()
@@ -143,7 +139,7 @@ void loop1()
                 // Go back to running the current color and pattern
                 for (int i = 0; i < PinConstants::LED::NumPorts; i++)
                 {
-                    patternRunners[i]->reset();
+                    zones[i]->reset();
                 }
                 systemOn = true;
                 break;
@@ -168,48 +164,35 @@ void loop1()
                 Serial.println("Pattern");
                 // To set everything to a certain color, change color then call
                 // the 'set all' pattern
-                auto runner = getPatternRunner(ledPort);
                 CommandPattern data = cmd.commandData.commandPattern;
 
                 uint16_t delay =
                     data.delay == -1
-                        ? runner->getPattern(data.pattern)
+                        ? zones[ledPort]->getPattern(data.pattern)
                             ->changeDelayDefault
                         : data.delay;
 
-                runner->setCurrentPattern(data.pattern,
+                zones[ledPort]->setPattern(data.pattern,
                                         delay,
-                                        data.oneShot,
-                                        data.zoneIndex);
-
-                // if (systemOn)
-                // {
-                //     for (int i = 0; i < PinConstants::LED::NumPorts; i++)
-                //     {
-                //         // Serial.printf("Updating leds for port=%d\r\n", i);
-                //         patternRunners[i]->update();
-                //     }
-                // }
+                                        data.oneShot);
                 break;
             }
 
             case CommandType::ChangeColor:
             {
-                auto runner = getPatternRunner(ledPort);
                 CommandColor data = cmd.commandData.commandColor;
 
                 Serial.printf("Color=%d|%d|%d\n", data.red, data.green, data.blue);
-                runner->setCurrentColor(
+                zones[ledPort]->setColor(
                     (uint32_t)CRGB(data.red, data.green, data.blue));
                 break;
             }
 
             case CommandType::SetPatternZone:
             {
-                auto runner = getPatternRunner(ledPort);
                 CommandSetPatternZone data = cmd.commandData.commandSetPatternZone;
 
-                runner->setZoneRun(RunZone(data));
+                zones[ledPort]->setRunZone(data.zoneIndex, data.reversed);
                 Serial.printf("Pattern zone index=%u, reversed=%d\r\n",
                     data.zoneIndex, data.reversed);
                 break;
@@ -219,7 +202,7 @@ void loop1()
 
     if (systemOn)
     {
-        patternRunners[1]->update();
+        zones[1]->updateZones();
         // for (int i = 0; i < PinConstants::LED::NumPorts; i++)
         // {
         //     // Serial.printf("Updating leds for port=%d\r\n", i);
@@ -238,15 +221,15 @@ CRGB *getPixels(uint8_t port)
     return pixels[PinConstants::LED::DefaultPort];
 }
 
-PatternRunner *getPatternRunner(uint8_t port)
-{
-    if (port < PinConstants::LED::NumPorts)
-    {
-        return patternRunners[port];
-    }
+// PatternRunner *getPatternRunner(uint8_t port)
+// {
+//     if (port < PinConstants::LED::NumPorts)
+//     {
+//         return patternRunners[port];
+//     }
 
-    return patternRunners[PinConstants::LED::DefaultPort];
-}
+//     return patternRunners[PinConstants::LED::DefaultPort];
+// }
 
 void loop()
 {
@@ -418,8 +401,8 @@ void requestEvent()
      */
     case CommandType::ReadPatternDone:
     {
-        auto done = getPatternRunner(ledPort)->patternDone();
-        res.responseData.responsePatternDone.done = done;
+        // auto done = getPatternRunner(ledPort)->patternDone();
+        res.responseData.responsePatternDone.done = false;
         break;
     }
 
@@ -456,10 +439,10 @@ void requestEvent()
 
     case CommandType::GetColor:
     {
-        auto runner = getPatternRunner(ledPort);
-        uint32_t msg = runner->getCurrentColor();
+        // auto runner = getPatternRunner(ledPort);
+        // uint32_t msg = runner->getCurrentColor();
 
-        res.responseData.responseReadColor.color = msg;
+        res.responseData.responseReadColor.color = 0x00;
         break;
     }
 
@@ -550,11 +533,10 @@ void initPixels(LedConfiguration *config, uint8_t port)
     }
 
     // TODO: Make the # of zones configurable
-    zones[port] = std::make_unique<PatternZone>(config->count, 4);
+    zones[port] = std::make_unique<PatternZone>(port, config->brightness, strip, config->count, 4);
+
     Serial.printf("zones size=%d\r\n", zones[port]->_zones->size());
 
-    patternRunners[port] = new PatternRunner(strip, Animation::patterns,
-        port, config->brightness, zones[port].get(), PatternCount);
     strip[0] = CRGB(255, 127, 31);
     FastLED[port].showLeds();
     delay(1000);

@@ -55,7 +55,6 @@ struct CommandPattern
     uint8_t pattern;
     uint8_t oneShot;
     int16_t delay;
-    uint16_t zoneIndex;
 };
 
 struct CommandColor
