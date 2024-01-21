@@ -8,7 +8,7 @@ namespace PinConstants
 {
     namespace I2C
     {
-        constexpr uint8_t ReceiveBufSize = 16u;
+        constexpr uint8_t ReceiveBufSize = 128u;
         namespace Port0
         {
             constexpr uint8_t BaseAddress = 0b0010000;

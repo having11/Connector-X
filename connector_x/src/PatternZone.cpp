@@ -12,7 +12,7 @@ PatternZone::PatternZone(uint8_t port, uint8_t brightness,
     {
         uint16_t offset = getOffsetFromLength(i, ledCountPerLength);
 
-        _zones->push_back({ .offset = offset, .count = ledCountPerLength });
+        _zones->push_back(ZoneDefinition(offset, ledCountPerLength ));
         _runZones->push_back(RunZone(i, false));
     }
 

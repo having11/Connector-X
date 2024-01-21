@@ -14,6 +14,18 @@ struct ZoneDefinition {
     uint16_t offset;
     uint16_t count;
 
+    ZoneDefinition(uint16_t off, uint16_t ct)
+    {
+        offset = off;
+        count = ct;
+    }
+
+    explicit ZoneDefinition(const NewZone &zone)
+    {
+        offset = zone.offset;
+        count = zone.count;
+    }
+
     inline std::string toString()
     {
         std::string str = "Offset: ";

@@ -36,9 +36,10 @@ enum class CommandType
     GetColor = 14,
     // R
     GetPort = 15,
-    // TODO: Set several pattern zones at once to run in parallel
     // W
     SetPatternZone = 16,
+    //W
+    SetNewZones = 17,
 };
 
 struct CommandOn
@@ -133,6 +134,18 @@ struct CommandSetPatternZone
     uint8_t reversed;
 };
 
+struct NewZone
+{
+    uint16_t offset;
+    uint16_t count;
+};
+
+struct CommandSetNewZones
+{
+    uint8_t zoneCount;
+    NewZone zones[10];
+};
+
 union CommandData
 {
     CommandOn commandOn;
@@ -151,6 +164,7 @@ union CommandData
     CommandGetColor commandGetColor;
     CommandGetPort commandGetPort;
     CommandSetPatternZone commandSetPatternZone;
+    CommandSetNewZones commandSetNewZones;
 };
 
 struct Command

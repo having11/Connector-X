@@ -197,6 +197,23 @@ void loop1()
                     data.zoneIndex, data.reversed);
                 break;
             }
+
+            case CommandType::SetNewZones:
+                CommandSetNewZones data = cmd.commandData.commandSetNewZones;
+                std::vector<ZoneDefinition> zoneDefs;
+
+                for (uint8_t i = 0; i < data.zoneCount; i++)
+                {
+                    zoneDefs.push_back(ZoneDefinition(data.zones[i]));
+                }
+
+                auto& ledConfig = ledPort == 0 ? config.led0 : config.led1;
+
+                zones[ledPort] = std::make_unique<PatternZone>(
+                    ledPort, ledConfig.brightness, pixels[ledPort], ledConfig.count, data.zoneCount);
+
+                Serial.printf("Set %d new zones\r\n", data.zoneCount);
+                break;
         }
 
         // zones[1]->updateZones();
@@ -348,6 +365,12 @@ void loop()
 #endif
 
         case CommandType::SetPatternZone:
+        {
+            rp2040.fifo.push(0xFE020000);
+            break;
+        }
+
+        case CommandType::SetNewZones:
         {
             rp2040.fifo.push(0xFE020000);
             break;
