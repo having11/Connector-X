@@ -85,11 +85,22 @@ namespace CommandParser
             break;
 
         case CommandType::SetNewZones:
+        {
             uint8_t zones = buf[1];
             cmd->commandData.commandSetNewZones.zoneCount = zones;
             memcpy(&cmd->commandData.commandSetNewZones.zones, &buf[2],
                 zones * sizeof(NewZone));
             break;
+        }
+
+        case CommandType::SyncStates:
+        {
+            uint8_t zones = buf[1];
+            cmd->commandData.commandSyncZoneStates.zoneCount = zones;
+            memcpy(&cmd->commandData.commandSyncZoneStates.zones, &buf[2],
+                zones * sizeof(uint8_t));
+            break;
+        }
 
         default:
             break;

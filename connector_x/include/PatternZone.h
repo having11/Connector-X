@@ -91,7 +91,7 @@ class PatternZone {
         explicit PatternZone(uint8_t port, uint8_t brightness,
             CRGB *leds, uint16_t ledCount, uint16_t zoneCount = 1);
         explicit PatternZone(uint8_t port, uint8_t brightness,
-            CRGB *leds, const std::vector<ZoneDefinition> &zones);
+            CRGB *leds, std::vector<ZoneDefinition> *zones);
 
         /**
          * @brief Update the current zone index
@@ -127,6 +127,15 @@ class PatternZone {
             }
         }
 
+        inline void resetZones(uint8_t *zoneIndexes, uint8_t count)
+        {
+            for (uint8_t i = 0; i < count; i++)
+            {
+                auto& runZone = getRunZoneFromIndex(zoneIndexes[i]);
+                runZone.reset();
+            }
+        }
+
         inline Pattern *getPattern(uint8_t index) const { return &Animation::patterns[index]; }
 
         std::unique_ptr<std::vector<ZoneDefinition>> _zones;
@@ -147,7 +156,7 @@ class PatternZone {
             return index * ledCountPerLength;
         }
 
-        uint16_t _zoneIndex;
+        uint16_t _zoneIndex = 0;
         uint8_t _port;
         uint8_t _brightness;
         CRGB *_leds;

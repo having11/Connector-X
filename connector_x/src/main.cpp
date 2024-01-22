@@ -199,21 +199,36 @@ void loop1()
             }
 
             case CommandType::SetNewZones:
+            {
                 CommandSetNewZones data = cmd.commandData.commandSetNewZones;
-                std::vector<ZoneDefinition> zoneDefs;
+                auto* zoneDefs = new std::vector<ZoneDefinition>();
+
+                Serial.printf("Seting up %d new zones\r\n", data.zoneCount);
 
                 for (uint8_t i = 0; i < data.zoneCount; i++)
                 {
-                    zoneDefs.push_back(ZoneDefinition(data.zones[i]));
+                    zoneDefs->push_back(ZoneDefinition(data.zones[i]));
+                    Serial.printf("Zone: %s\r\n", zoneDefs->at(i).toString().c_str());
                 }
 
                 auto& ledConfig = ledPort == 0 ? config.led0 : config.led1;
 
                 zones[ledPort] = std::make_unique<PatternZone>(
-                    ledPort, ledConfig.brightness, pixels[ledPort], ledConfig.count, data.zoneCount);
+                    ledPort, ledConfig.brightness, pixels[ledPort], zoneDefs);
 
                 Serial.printf("Set %d new zones\r\n", data.zoneCount);
+
                 break;
+            }
+
+            case CommandType::SyncStates:
+            {
+                CommandSyncZoneStates data = cmd.commandData.commandSyncZoneStates;
+
+                zones[ledPort]->resetZones(data.zones, data.zoneCount);
+                Serial.printf("Reset %d zones\r\n", data.zoneCount);
+                break;
+            }
         }
 
         // zones[1]->updateZones();
@@ -371,6 +386,12 @@ void loop()
         }
 
         case CommandType::SetNewZones:
+        {
+            rp2040.fifo.push(0xFE020000);
+            break;
+        }
+
+        case CommandType::SyncStates:
         {
             rp2040.fifo.push(0xFE020000);
             break;
@@ -559,7 +580,7 @@ void initPixels(LedConfiguration *config, uint8_t port)
     }
 
     // TODO: Make the # of zones configurable
-    zones[port] = std::make_unique<PatternZone>(port, config->brightness, strip, config->count, 4);
+    zones[port] = std::make_unique<PatternZone>(port, config->brightness, strip, config->count);
 
     Serial.printf("zones size=%d\r\n", zones[port]->_zones->size());
 

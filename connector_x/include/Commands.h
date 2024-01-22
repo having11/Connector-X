@@ -40,6 +40,8 @@ enum class CommandType
     SetPatternZone = 16,
     //W
     SetNewZones = 17,
+    // W
+    SyncStates = 18,
 };
 
 struct CommandOn
@@ -146,6 +148,12 @@ struct CommandSetNewZones
     NewZone zones[10];
 };
 
+struct CommandSyncZoneStates
+{
+    uint8_t zoneCount;
+    uint8_t zones[10];
+};
+
 union CommandData
 {
     CommandOn commandOn;
@@ -165,6 +173,7 @@ union CommandData
     CommandGetPort commandGetPort;
     CommandSetPatternZone commandSetPatternZone;
     CommandSetNewZones commandSetNewZones;
+    CommandSyncZoneStates commandSyncZoneStates;
 };
 
 struct Command
