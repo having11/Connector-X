@@ -62,6 +62,7 @@ bool PatternZone::runPattern(uint16_t index, Pattern *pattern, CRGB* pixels,
     auto& runZone = getRunZoneFromIndex(index);
 
     CRGB *tempLeds = new CRGB[curZoneDef.count];
+    memset(tempLeds, 0, sizeof(CRGB) * curZoneDef.count);
 
     // Serial.printf("Created %d temp LED array\r\n", curZoneDef.count);
     // Serial.printf("Color=%lu, state=%u\r\n", runZone.color, runZone.state);
@@ -103,6 +104,7 @@ void PatternZone::updateZones(bool forceUpdate)
 void PatternZone::updateZone(uint16_t index, bool forceUpdate)
 {
     RunZone& runZone = getRunZoneFromIndex(index);
+    auto& curZoneDef = getZoneDefinitionFromIndex(index);
     auto curPattern = getPattern(runZone.patternIndex);
 
     // Serial.printf("Updating zone index=%u, state=%d, patternIndex=%d\r\n",
@@ -120,7 +122,10 @@ void PatternZone::updateZone(uint16_t index, bool forceUpdate)
         // Serial.printf("Updating zone index=%u, state=%d, patternIndex=%d\r\n",
         //     index, runZone.state, runZone.patternIndex);
         // If we're done, make sure to stop if one shot is set
-        if (runZone.state >= curPattern->numStates)
+        uint16_t stateCount = curPattern->mode == PatternStateMode::Constant ?
+            curPattern->numStates :
+            curZoneDef.count + curPattern->numStates;
+        if (runZone.state >= stateCount)
         {
             if (runZone.oneShot)
             {
