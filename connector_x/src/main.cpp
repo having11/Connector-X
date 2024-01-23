@@ -149,7 +149,7 @@ void loop1()
             {
                 Serial.println("Switching to off");
                 // Set LEDs to black and stop running the pattern
-                for (uint8_t port = 0; port < 2; port++)
+                for (uint8_t port = 0; port < PinConstants::LED::NumPorts; port++)
                 {
                     auto pixels = getPixels(ledPort);
                     Animation::executePatternSetAll(pixels, 0, 0, FastLED[port].size());
@@ -183,6 +183,15 @@ void loop1()
                 CommandColor data = cmd.commandData.commandColor;
 
                 Serial.printf("Color=%d|%d|%d\n", data.red, data.green, data.blue);
+
+                // Handle port 0 being RGB instead of GRB
+                if (ledPort == 0)
+                {
+                    uint8_t temp = data.red;
+                    data.red = data.green;
+                    data.green = temp;
+                }
+
                 zones[ledPort]->setColor(
                     (uint32_t)CRGB(data.red, data.green, data.blue));
                 break;
@@ -230,19 +239,15 @@ void loop1()
                 break;
             }
         }
-
-        // zones[1]->updateZones();
     }
 
     if (systemOn)
     {
-        zones[1]->updateZones();
-        // FastLED[1].showLeds(20);
-        // for (int i = 0; i < PinConstants::LED::NumPorts; i++)
-        // {
-        //     // Serial.printf("Updating leds for port=%d\r\n", i);
-        //     patternRunners[i]->update();
-        // }
+        for (int i = 0; i < PinConstants::LED::NumPorts; i++)
+        {
+            // Serial.printf("Updating leds for port=%d\r\n", i);
+            zones[i]->updateZones();
+        }
     }
 }
 

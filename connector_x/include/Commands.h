@@ -38,7 +38,7 @@ enum class CommandType
     GetPort = 15,
     // W
     SetPatternZone = 16,
-    //W
+    // W
     SetNewZones = 17,
     // W
     SyncStates = 18,
