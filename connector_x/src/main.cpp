@@ -67,6 +67,7 @@ void setup()
 
     Serial.begin(UartBaudRate);
 
+    rp2040.idleOtherCore();
     config = configurator.begin();
 
     // Peripherals
@@ -100,6 +101,9 @@ void setup()
     initPixels(&config.led0, 0);
     initPixels(&config.led1, 1);
 
+    rp2040.resumeOtherCore();
+    rp2040.restartCore1();
+
 #ifdef ENABLE_RADIO
     radio = new PacketRadio(&SPI1, config, handleRadioDataReceive);
 
@@ -115,7 +119,7 @@ void setup()
 
 void setup1()
 {
-    delay(5000);
+    delay(20000);
     Serial.println("Setup1 has ended");
 }
 
