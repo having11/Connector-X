@@ -56,8 +56,8 @@ void Configurator::createConfig()
     config.led1.brightness = Serial.parseInt();
     Serial.println(config.led1.brightness);
 
-    Serial.println("Storing config:");
-    Serial.println(toString(config).c_str());
+    Serial.println("Storing config");
+    // Serial.println(toString(config).c_str());
     storeConfig(config);
     Serial.println("Done");
 }

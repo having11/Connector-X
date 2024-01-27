@@ -1,3 +1,5 @@
+#define PICO_USE_STACK_GUARDS 1
+
 #include <Arduino.h>
 #include <SD.h>
 #include <SPI.h>
@@ -10,7 +12,9 @@
 #include "Configurator.h"
 #include "Constants.h"
 #include "PacketRadio.h"
-#include "PatternRunner.h"
+#include "PatternZone.h"
+
+#include <memory>
 
 // Uncomment to enable radio module communications
 // #define ENABLE_RADIO
@@ -27,7 +31,7 @@ void initI2C0(void);
 void initPixels(LedConfiguration *config, uint8_t port);
 
 CRGB *getPixels(uint8_t port);
-PatternRunner *getPatternRunner(uint8_t port);
+// PatternRunner *getPatternRunner(uint8_t port);
 
 static volatile uint8_t receiveBuf[PinConstants::I2C::ReceiveBufSize];
 static volatile bool newData = false;
@@ -38,7 +42,9 @@ static Configurator configurator;
 static volatile uint8_t ledPort = 0;
 
 static CRGB *pixels[PinConstants::LED::NumPorts];
-static PatternRunner *patternRunners[PinConstants::LED::NumPorts];
+// TODO: Make this an array of arrays -> Each port can have multiple zones
+static std::unique_ptr<PatternZone> zones[PinConstants::LED::NumPorts];
+// static PatternRunner *patternRunners[PinConstants::LED::NumPorts];
 
 #ifdef ENABLE_RADIO
 static PacketRadio *radio;
@@ -61,6 +67,7 @@ void setup()
 
     Serial.begin(UartBaudRate);
 
+    rp2040.idleOtherCore();
     config = configurator.begin();
 
     // Peripherals
@@ -94,6 +101,9 @@ void setup()
     initPixels(&config.led0, 0);
     initPixels(&config.led1, 1);
 
+    rp2040.resumeOtherCore();
+    rp2040.restartCore1();
+
 #ifdef ENABLE_RADIO
     radio = new PacketRadio(&SPI1, config, handleRadioDataReceive);
 
@@ -109,7 +119,7 @@ void setup()
 
 void setup1()
 {
-    delay(5000);
+    delay(20000);
     Serial.println("Setup1 has ended");
 }
 
@@ -117,32 +127,15 @@ void loop1()
 {
     if (rp2040.fifo.available())
     {
-        uint8_t toReadCount;
+        Command cmd;
+        Serial.println("fifo available");
         uint32_t value = rp2040.fifo.pop();
-        while ((value >> 24) & 0xFF != 254 && rp2040.fifo.available())
-        {
-            Serial.println("Popped");
-            value = rp2040.fifo.pop();
-        }
 
-        toReadCount = (value >> 16) & 0xFF;
-        uint32_t buf[toReadCount];
+        mutex_enter_blocking(&i2cCommandMtx);
+        cmd = command;
+        mutex_exit(&i2cCommandMtx);
 
-        for (uint8_t i = 0; i < toReadCount; i++)
-        {
-            buf[i] = rp2040.fifo.pop();
-        }
-
-        Serial.printf("[Core 1] Data buffer=\t");
-        for (int i = 0; i < toReadCount; i++)
-        {
-            Serial.printf("%lX ", buf[toReadCount]);
-        }
-        Serial.println();
-
-        CommandType type = (CommandType)buf[0];
-
-        switch (type)
+        switch (cmd.commandType)
         {
             case CommandType::On:
             {
@@ -150,7 +143,7 @@ void loop1()
                 // Go back to running the current color and pattern
                 for (int i = 0; i < PinConstants::LED::NumPorts; i++)
                 {
-                    patternRunners[i]->reset();
+                    zones[i]->reset();
                 }
                 systemOn = true;
                 break;
@@ -160,7 +153,7 @@ void loop1()
             {
                 Serial.println("Switching to off");
                 // Set LEDs to black and stop running the pattern
-                for (uint8_t port = 0; port < 2; port++)
+                for (uint8_t port = 0; port < PinConstants::LED::NumPorts; port++)
                 {
                     auto pixels = getPixels(ledPort);
                     Animation::executePatternSetAll(pixels, 0, 0, FastLED[port].size());
@@ -175,17 +168,15 @@ void loop1()
                 Serial.println("Pattern");
                 // To set everything to a certain color, change color then call
                 // the 'set all' pattern
-                auto runner = getPatternRunner(ledPort);
-                CommandPattern data;
-                memcpy(&data, buf + 1, sizeof(uint32_t));
+                CommandPattern data = cmd.commandData.commandPattern;
 
                 uint16_t delay =
                     data.delay == -1
-                        ? runner->getPattern(data.pattern)
+                        ? zones[ledPort]->getPattern(data.pattern)
                             ->changeDelayDefault
                         : data.delay;
 
-                runner->setCurrentPattern(data.pattern,
+                zones[ledPort]->setPattern(data.pattern,
                                         delay,
                                         data.oneShot);
                 break;
@@ -193,13 +184,62 @@ void loop1()
 
             case CommandType::ChangeColor:
             {
-                auto runner = getPatternRunner(ledPort);
-                CommandColor data;
-                memcpy(&data, buf + 1, sizeof(CommandColor));
+                CommandColor data = cmd.commandData.commandColor;
 
                 Serial.printf("Color=%d|%d|%d\n", data.red, data.green, data.blue);
-                runner->setCurrentColor(
+
+                // Handle port 0 being RGB instead of GRB
+                if (ledPort == 0)
+                {
+                    uint8_t temp = data.red;
+                    data.red = data.green;
+                    data.green = temp;
+                }
+
+                zones[ledPort]->setColor(
                     (uint32_t)CRGB(data.red, data.green, data.blue));
+                break;
+            }
+
+            case CommandType::SetPatternZone:
+            {
+                CommandSetPatternZone data = cmd.commandData.commandSetPatternZone;
+
+                zones[ledPort]->setRunZone(data.zoneIndex, data.reversed);
+                Serial.printf("Pattern zone index=%u, reversed=%d\r\n",
+                    data.zoneIndex, data.reversed);
+                break;
+            }
+
+            case CommandType::SetNewZones:
+            {
+                CommandSetNewZones data = cmd.commandData.commandSetNewZones;
+                auto* zoneDefs = new std::vector<ZoneDefinition>();
+
+                Serial.printf("Seting up %d new zones\r\n", data.zoneCount);
+
+                for (uint8_t i = 0; i < data.zoneCount; i++)
+                {
+                    zoneDefs->push_back(ZoneDefinition(data.zones[i]));
+                    Serial.printf("Zone: %s\r\n", zoneDefs->at(i).toString().c_str());
+                }
+
+                auto& ledConfig = ledPort == 0 ? config.led0 : config.led1;
+
+                zones[ledPort] = std::make_unique<PatternZone>(
+                    ledPort, ledConfig.brightness, pixels[ledPort], zoneDefs);
+
+                Serial.printf("Set %d new zones\r\n", data.zoneCount);
+
+                break;
+            }
+
+            case CommandType::SyncStates:
+            {
+                CommandSyncZoneStates data = cmd.commandData.commandSyncZoneStates;
+
+                zones[ledPort]->resetZones(data.zones, data.zoneCount);
+                Serial.printf("Reset %d zones\r\n", data.zoneCount);
                 break;
             }
         }
@@ -209,7 +249,8 @@ void loop1()
     {
         for (int i = 0; i < PinConstants::LED::NumPorts; i++)
         {
-            patternRunners[i]->update();
+            // Serial.printf("Updating leds for port=%d\r\n", i);
+            zones[i]->updateZones();
         }
     }
 }
@@ -224,15 +265,15 @@ CRGB *getPixels(uint8_t port)
     return pixels[PinConstants::LED::DefaultPort];
 }
 
-PatternRunner *getPatternRunner(uint8_t port)
-{
-    if (port < PinConstants::LED::NumPorts)
-    {
-        return patternRunners[port];
-    }
+// PatternRunner *getPatternRunner(uint8_t port)
+// {
+//     if (port < PinConstants::LED::NumPorts)
+//     {
+//         return patternRunners[port];
+//     }
 
-    return patternRunners[PinConstants::LED::DefaultPort];
-}
+//     return patternRunners[PinConstants::LED::DefaultPort];
+// }
 
 void loop()
 {
@@ -249,7 +290,12 @@ void loop()
             Serial.printf("%X ", receiveBuf[i]);
         }
         Serial.println();
-        CommandParser::parseCommand(buf, PinConstants::I2C::ReceiveBufSize, &command);
+        Command cmdTemp;
+        CommandParser::parseCommand(buf, PinConstants::I2C::ReceiveBufSize, &cmdTemp);
+
+        mutex_enter_blocking(&i2cCommandMtx);
+        command = cmdTemp;
+        mutex_exit(&i2cCommandMtx);
 
         newDataToParse = false;
         newData = true;
@@ -270,10 +316,6 @@ void loop()
         {
             // Go back to running the current color and pattern
             rp2040.fifo.push(0xFE010000);
-            uint32_t val;
-            memcpy(&val, &command.commandType, sizeof(CommandType));
-            rp2040.fifo.push(val);
-            systemOn = true;
             break;
         }
 
@@ -281,10 +323,6 @@ void loop()
         {
             // Set LEDs to black and stop running the pattern
             rp2040.fifo.push(0xFE010000);
-            uint32_t val;
-            memcpy(&val, &command.commandType, sizeof(CommandType));
-            rp2040.fifo.push(val);
-            systemOn = false;
             break;
         }
 
@@ -292,23 +330,15 @@ void loop()
         {
             // To set everything to a certain color, change color then call
             // the 'set all' pattern
-            rp2040.fifo.push(0xFE020000);
-            uint32_t val;
-            memcpy(&val, &command.commandType, sizeof(CommandType));
-            rp2040.fifo.push(val);
-            memcpy(&val, &command.commandData.commandPattern, sizeof(CommandPattern));
-            rp2040.fifo.push(val);
+            Serial.println("pattern pushing to fifo");
+            rp2040.fifo.push(0xFE030000);
             break;
         }
 
         case CommandType::ChangeColor:
         {
+            Serial.println("color pushing to fifo");
             rp2040.fifo.push(0xFE020000);
-            uint32_t val;
-            memcpy(&val, &command.commandType, sizeof(CommandType));
-            rp2040.fifo.push(val);
-            memcpy(&val, &command.commandData.commandColor, sizeof(CommandColor));
-            rp2040.fifo.push(val);
             break;
         }
 
@@ -357,6 +387,24 @@ void loop()
             }
         }
 #endif
+
+        case CommandType::SetPatternZone:
+        {
+            rp2040.fifo.push(0xFE020000);
+            break;
+        }
+
+        case CommandType::SetNewZones:
+        {
+            rp2040.fifo.push(0xFE020000);
+            break;
+        }
+
+        case CommandType::SyncStates:
+        {
+            rp2040.fifo.push(0xFE020000);
+            break;
+        }
 
         default:
             break;
@@ -409,8 +457,8 @@ void requestEvent()
      */
     case CommandType::ReadPatternDone:
     {
-        auto done = getPatternRunner(ledPort)->patternDone();
-        res.responseData.responsePatternDone.done = done;
+        // auto done = getPatternRunner(ledPort)->patternDone();
+        res.responseData.responsePatternDone.done = false;
         break;
     }
 
@@ -447,10 +495,10 @@ void requestEvent()
 
     case CommandType::GetColor:
     {
-        auto runner = getPatternRunner(ledPort);
-        uint32_t msg = runner->getCurrentColor();
+        // auto runner = getPatternRunner(ledPort);
+        // uint32_t msg = runner->getCurrentColor();
 
-        res.responseData.responseReadColor.color = msg;
+        res.responseData.responseReadColor.color = 0x00;
         break;
     }
 
@@ -540,8 +588,12 @@ void initPixels(LedConfiguration *config, uint8_t port)
         FastLED.addLeds<WS2812, PinConstants::LED::Dout1, GRB>(strip, config->count);
     }
 
-    patternRunners[port] = new PatternRunner(strip, Animation::patterns,
-        port, config->brightness, PatternCount);
+    // TODO: Make the # of zones configurable
+    zones[port] = std::make_unique<PatternZone>(port, config->brightness, strip, config->count);
+
+    Serial.printf("zones size=%d\r\n", zones[port]->_zones->size());
+
+    FastLED[port].clearLedData();
     strip[0] = CRGB(255, 127, 31);
     FastLED[port].showLeds();
     delay(1000);

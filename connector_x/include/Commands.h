@@ -35,7 +35,13 @@ enum class CommandType
     // R
     GetColor = 14,
     // R
-    GetPort = 15
+    GetPort = 15,
+    // W
+    SetPatternZone = 16,
+    // W
+    SetNewZones = 17,
+    // W
+    SyncStates = 18,
 };
 
 struct CommandOn
@@ -123,6 +129,31 @@ struct CommandGetPort
 {
 };
 
+struct CommandSetPatternZone
+{
+    uint16_t zoneIndex;
+    // if non-zero, will go from end pixel to start pixel
+    uint8_t reversed;
+};
+
+struct NewZone
+{
+    uint16_t offset;
+    uint16_t count;
+};
+
+struct CommandSetNewZones
+{
+    uint8_t zoneCount;
+    NewZone zones[10];
+};
+
+struct CommandSyncZoneStates
+{
+    uint8_t zoneCount;
+    uint8_t zones[10];
+};
+
 union CommandData
 {
     CommandOn commandOn;
@@ -140,6 +171,9 @@ union CommandData
     CommandRadioGetLatestReceived commandRadioGetLatestReceived;
     CommandGetColor commandGetColor;
     CommandGetPort commandGetPort;
+    CommandSetPatternZone commandSetPatternZone;
+    CommandSetNewZones commandSetNewZones;
+    CommandSyncZoneStates commandSyncZoneStates;
 };
 
 struct Command
