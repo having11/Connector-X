@@ -255,12 +255,12 @@ void loop1()
 
     if (systemOn)
     {
-        zones[1]->updateZones();
-        // for (int i = 0; i < PinConstants::LED::NumPorts; i++)
-        // {
-        //     // Serial.printf("Updating leds for port=%d\r\n", i);
-        //     zones[i]->updateZones();
-        // }
+        // zones[1]->updateZones();
+        for (int i = 0; i < PinConstants::LED::NumPorts; i++)
+        {
+            // Serial.printf("Updating leds for port=%d\r\n", i);
+            zones[i]->updateZones();
+        }
     }
 }
 
