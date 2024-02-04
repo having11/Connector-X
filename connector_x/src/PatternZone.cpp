@@ -45,6 +45,7 @@ bool PatternZone::setRunZone(uint16_t index, bool reversed)
 {
     if (index > _zones->size() - 1)
     {
+
         return false;
     }
 
