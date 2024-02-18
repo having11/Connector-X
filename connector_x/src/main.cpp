@@ -119,7 +119,7 @@ void setup()
 
 void setup1()
 {
-    delay(20000);
+    delay(2000);
     Serial.println("Setup1 has ended");
 }
 
@@ -165,7 +165,7 @@ void loop1()
 
             case CommandType::Pattern:
             {
-                Serial.println("Pattern");
+                // Serial.println("Pattern");
                 // To set everything to a certain color, change color then call
                 // the 'set all' pattern
                 CommandPattern data = cmd.commandData.commandPattern;
@@ -186,7 +186,7 @@ void loop1()
             {
                 CommandColor data = cmd.commandData.commandColor;
 
-                Serial.printf("Color=%d|%d|%d\n", data.red, data.green, data.blue);
+                // Serial.printf("Color=%d|%d|%d\n", data.red, data.green, data.blue);
 
                 // Handle port 0 being RGB instead of GRB
                 if (ledPort == 0)
@@ -206,8 +206,8 @@ void loop1()
                 CommandSetPatternZone data = cmd.commandData.commandSetPatternZone;
 
                 zones[ledPort]->setRunZone(data.zoneIndex, data.reversed);
-                Serial.printf("Pattern zone index=%u, reversed=%d\r\n",
-                    data.zoneIndex, data.reversed);
+                // Serial.printf("Pattern zone index=%u, reversed=%d\r\n",
+                //     data.zoneIndex, data.reversed);
                 break;
             }
 
@@ -239,7 +239,7 @@ void loop1()
                 CommandSyncZoneStates data = cmd.commandData.commandSyncZoneStates;
 
                 zones[ledPort]->resetZones(data.zones, data.zoneCount);
-                Serial.printf("Reset %d zones\r\n", data.zoneCount);
+                // Serial.printf("Reset %d zones\r\n", data.zoneCount);
                 break;
             }
         }

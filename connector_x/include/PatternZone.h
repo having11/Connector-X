@@ -117,7 +117,7 @@ class PatternZone {
 
         void setColor(uint32_t color);
 
-        void incrementState(uint16_t index, Pattern *pattern);
+        bool incrementState(uint16_t index, Pattern *pattern);
 
         inline void reset()
         {

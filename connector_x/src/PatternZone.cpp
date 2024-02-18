@@ -141,8 +141,9 @@ void PatternZone::updateZone(uint16_t index, bool forceUpdate)
                 index, runZone.state, runZone.lastUpdateMs);
         }
 
-        incrementState(index, curPattern);
-        FastLED[_port].showLeds(_brightness);
+        if (incrementState(index, curPattern)) {
+            FastLED[_port].showLeds(_brightness);
+        }
     }
 }
 
@@ -160,8 +161,8 @@ void PatternZone::setPattern(uint8_t patternIndex, uint16_t delay, bool isOneSho
     runZone.delay = delay;
     runZone.reset();
 
-    Serial.printf("Set pattern to %d | one shot=%d | delay=%d | zone=%d\r\n", patternIndex,
-                    isOneShot, delay, _zoneIndex);
+    // Serial.printf("Set pattern to %d | one shot=%d | delay=%d | zone=%d\r\n", patternIndex,
+    //                 isOneShot, delay, _zoneIndex);
     
     updateZone(_zoneIndex, true);
 }
@@ -174,16 +175,19 @@ void PatternZone::setColor(uint32_t color)
     updateZone(_zoneIndex, true);
 }
 
-void PatternZone::incrementState(uint16_t index, Pattern *pattern)
+bool PatternZone::incrementState(uint16_t index, Pattern *pattern)
 {
     // Serial.printf("Incrementing state for index=%u\r\n", index);
     RunZone& runZone = getRunZoneFromIndex(index);
 
-    if (runPattern(index, pattern, _leds, runZone.color, runZone.state))
+    bool shouldUpdate = runPattern(index, pattern, _leds, runZone.color, runZone.state);
+    if (shouldUpdate)
     {
         // Serial.printf("Showing\r\n");
     }
 
     runZone.state++;
     runZone.lastUpdateMs = millis();
+
+    return shouldUpdate;
 }
