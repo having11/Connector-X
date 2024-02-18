@@ -22,6 +22,9 @@
 static mutex_t i2cCommandMtx;
 static mutex_t radioDataMtx;
 
+// Give Core1 8K of stack space
+bool core1_separate_stack = true;
+
 // Forward declarations
 void receiveEvent(int);
 void requestEvent(void);
