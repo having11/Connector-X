@@ -592,7 +592,7 @@ void initPixels(LedConfiguration *config, uint8_t port)
     }
 
     // TODO: Make the # of zones configurable
-    zones[port] = std::make_unique<PatternZone>(port, config->brightness, strip, config->count);
+    zones[port] = std::make_unique<PatternZone>(port, config->brightness, strip, config->count, 4);
 
     Serial.printf("zones size=%d\r\n", zones[port]->_zones->size());
 
