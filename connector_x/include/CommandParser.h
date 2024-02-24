@@ -1,5 +1,7 @@
 #pragma once
 
+#include <pico/mutex.h>
+
 #include "Arduino.h"
 #include "Commands.h"
 
@@ -107,3 +109,91 @@ namespace CommandParser
         }
     }
 } // namespace CommandParser
+
+struct CommandDequeNode {
+    CommandDequeNode* next;
+    Command cmd;
+};
+
+class CommandDeque {
+    public:
+        CommandDeque() : _size{0}, _head{nullptr}, _tail{nullptr} {
+            mutex_init(&_mtx);
+        }
+
+        ~CommandDeque() {
+            if (!_head) {
+                return;
+            }
+
+            CommandDequeNode* curNode = _head;
+            while (curNode) {
+                auto* nextNode = curNode->next;
+                delete curNode;
+                curNode = nextNode;
+            }
+        }
+
+        bool nextCommandAvailable() {
+            mutex_enter_blocking(&_mtx);
+            return _head;
+            mutex_exit(&_mtx);
+        }
+
+        int getNextCommand(Command* outCommand) {
+            mutex_enter_blocking(&_mtx);
+            if (_size <= 0 || !_head) {
+                return -1;
+            }
+
+            auto* newHead = _head->next;
+            Command cmd = _head->cmd;
+            delete _head;
+            _head = newHead;
+
+            _size--;
+
+            if (!_head) {
+                _tail = nullptr;
+            }
+
+            int size = _size;
+            mutex_exit(&_mtx);
+            return size;
+        }
+
+        int pushCommand(Command command) {
+            mutex_enter_blocking(&_mtx);
+            CommandDequeNode* newNode = new CommandDequeNode {
+                .next = nullptr,
+                .cmd = command,
+            };
+
+            if (!_head || !_tail) {
+                _head = newNode;
+                _tail = newNode;
+            } else {
+                _tail->next = newNode;
+                _tail = newNode;
+            }
+
+            _size++;
+
+            int size = _size;
+            mutex_exit(&_mtx);
+            return size;
+        }
+
+        int size() {
+            mutex_enter_blocking(&_mtx);
+            int size = _size;
+            mutex_exit(&_mtx);
+            return size;
+        }
+
+    private:
+        int _size = 0;
+        CommandDequeNode* _head;
+        CommandDequeNode* _tail;
+        mutex_t _mtx;
+};

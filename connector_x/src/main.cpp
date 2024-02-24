@@ -34,7 +34,6 @@ void initI2C0(void);
 void initPixels(LedConfiguration *config, uint8_t port);
 
 CRGB *getPixels(uint8_t port);
-// PatternRunner *getPatternRunner(uint8_t port);
 
 static volatile uint8_t receiveBuf[PinConstants::I2C::ReceiveBufSize];
 static volatile bool newData = false;
@@ -54,6 +53,7 @@ static PacketRadio *radio;
 #endif
 
 static Command command;
+static CommandDeque commandDequeue;
 
 static volatile bool systemOn = true;
 
@@ -128,15 +128,15 @@ void setup1()
 
 void loop1()
 {
-    if (rp2040.fifo.available())
+    if (commandDequeue.nextCommandAvailable())
     {
         Command cmd;
         Serial.println("fifo available");
-        uint32_t value = rp2040.fifo.pop();
+        bool success = commandDequeue.getNextCommand(&cmd);
 
-        mutex_enter_blocking(&i2cCommandMtx);
-        cmd = command;
-        mutex_exit(&i2cCommandMtx);
+        if (!success) {
+            return;
+        }
 
         switch (cmd.commandType)
         {
@@ -242,17 +242,17 @@ void loop1()
                 CommandSyncZoneStates data = cmd.commandData.commandSyncZoneStates;
 
                 zones[ledPort]->resetZones(data.zones, data.zoneCount);
-                // Serial.printf("Reset %d zones\r\n", data.zoneCount);
                 break;
             }
         }
+
+        delayMicroseconds(100);
     }
 
     if (systemOn)
     {
         for (int i = 0; i < PinConstants::LED::NumPorts; i++)
         {
-            // Serial.printf("Updating leds for port=%d\r\n", i);
             zones[i]->updateZones();
         }
     }
@@ -286,19 +286,20 @@ void loop()
         Serial.printf("Got new data\n");
         uint8_t buf[PinConstants::I2C::ReceiveBufSize];
         // Copy our new data
+        mutex_enter_blocking(&i2cCommandMtx);
         memcpy(buf, (const void *)receiveBuf, PinConstants::I2C::ReceiveBufSize);
-        Serial.printf("Rec data buffer=\t");
-        for (int i = 0; i < 16; i++)
-        {
-            Serial.printf("%X ", receiveBuf[i]);
-        }
-        Serial.println();
+        mutex_exit(&i2cCommandMtx);
+        // Serial.printf("Rec data buffer=\t");
+        // for (int i = 0; i < 16; i++)
+        // {
+        //     Serial.printf("%X ", receiveBuf[i]);
+        // }
+        // Serial.println();
         Command cmdTemp;
         CommandParser::parseCommand(buf, PinConstants::I2C::ReceiveBufSize, &cmdTemp);
 
-        mutex_enter_blocking(&i2cCommandMtx);
         command = cmdTemp;
-        mutex_exit(&i2cCommandMtx);
+        
 
         newDataToParse = false;
         newData = true;
@@ -318,14 +319,14 @@ void loop()
         case CommandType::On:
         {
             // Go back to running the current color and pattern
-            rp2040.fifo.push(0xFE010000);
+            commandDequeue.pushCommand(command);
             break;
         }
 
         case CommandType::Off:
         {
             // Set LEDs to black and stop running the pattern
-            rp2040.fifo.push(0xFE010000);
+            commandDequeue.pushCommand(command);
             break;
         }
 
@@ -334,14 +335,14 @@ void loop()
             // To set everything to a certain color, change color then call
             // the 'set all' pattern
             Serial.println("pattern pushing to fifo");
-            rp2040.fifo.push(0xFE030000);
+            commandDequeue.pushCommand(command);
             break;
         }
 
         case CommandType::ChangeColor:
         {
             Serial.println("color pushing to fifo");
-            rp2040.fifo.push(0xFE020000);
+            commandDequeue.pushCommand(command);
             break;
         }
 
@@ -393,19 +394,19 @@ void loop()
 
         case CommandType::SetPatternZone:
         {
-            rp2040.fifo.push(0xFE020000);
+            commandDequeue.pushCommand(command);
             break;
         }
 
         case CommandType::SetNewZones:
         {
-            rp2040.fifo.push(0xFE020000);
+            commandDequeue.pushCommand(command);
             break;
         }
 
         case CommandType::SyncStates:
         {
-            rp2040.fifo.push(0xFE020000);
+            commandDequeue.pushCommand(command);
             break;
         }
 
@@ -442,8 +443,10 @@ void handleRadioDataReceive(Message msg)
 
 void receiveEvent(int howMany)
 {
+    mutex_enter_blocking(&i2cCommandMtx);
     Wire.readBytes((uint8_t *)receiveBuf, howMany);
     newDataToParse = true;
+    mutex_exit(&i2cCommandMtx);
 }
 
 void requestEvent()
@@ -592,7 +595,7 @@ void initPixels(LedConfiguration *config, uint8_t port)
     }
 
     // TODO: Make the # of zones configurable
-    zones[port] = std::make_unique<PatternZone>(port, config->brightness, strip, config->count);
+    zones[port] = std::make_unique<PatternZone>(port, config->brightness, strip, config->count, 4);
 
     Serial.printf("zones size=%d\r\n", zones[port]->_zones->size());
 
