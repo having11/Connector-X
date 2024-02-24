@@ -113,12 +113,16 @@ namespace CommandParser
 struct CommandDequeNode {
     CommandDequeNode* next;
     Command cmd;
+
+    CommandDequeNode(CommandDequeNode* after, Command command) {
+        next = after;
+        cmd = command;
+    }
 };
 
 class CommandDeque {
     public:
         CommandDeque() : _size{0}, _head{nullptr}, _tail{nullptr} {
-            mutex_init(&_mtx);
         }
 
         ~CommandDeque() {
@@ -135,19 +139,16 @@ class CommandDeque {
         }
 
         bool nextCommandAvailable() {
-            mutex_enter_blocking(&_mtx);
             return _head;
-            mutex_exit(&_mtx);
         }
 
         int getNextCommand(Command* outCommand) {
-            mutex_enter_blocking(&_mtx);
             if (_size <= 0 || !_head) {
                 return -1;
             }
 
             auto* newHead = _head->next;
-            Command cmd = _head->cmd;
+            *outCommand = _head->cmd;
             delete _head;
             _head = newHead;
 
@@ -157,17 +158,11 @@ class CommandDeque {
                 _tail = nullptr;
             }
 
-            int size = _size;
-            mutex_exit(&_mtx);
-            return size;
+            return size();
         }
 
         int pushCommand(Command command) {
-            mutex_enter_blocking(&_mtx);
-            CommandDequeNode* newNode = new CommandDequeNode {
-                .next = nullptr,
-                .cmd = command,
-            };
+            CommandDequeNode* newNode = new CommandDequeNode(nullptr, command);
 
             if (!_head || !_tail) {
                 _head = newNode;
@@ -179,21 +174,15 @@ class CommandDeque {
 
             _size++;
 
-            int size = _size;
-            mutex_exit(&_mtx);
-            return size;
+            return size();
         }
 
         int size() {
-            mutex_enter_blocking(&_mtx);
-            int size = _size;
-            mutex_exit(&_mtx);
-            return size;
+            return _size;
         }
 
     private:
         int _size = 0;
         CommandDequeNode* _head;
         CommandDequeNode* _tail;
-        mutex_t _mtx;
 };

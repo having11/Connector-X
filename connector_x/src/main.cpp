@@ -21,6 +21,7 @@
 
 static mutex_t i2cCommandMtx;
 static mutex_t radioDataMtx;
+static mutex_t commandMtx;
 
 // Give Core1 8K of stack space
 bool core1_separate_stack = true;
@@ -74,7 +75,7 @@ void setup()
     config = configurator.begin();
 
     // Peripherals
-    delay(1000);
+    delay(4000);
     initI2C0();
     Serial.println("I20 init done");
 
@@ -90,6 +91,7 @@ void setup()
 
     mutex_init(&i2cCommandMtx);
     mutex_init(&radioDataMtx);
+    mutex_init(&commandMtx);
 
     pinMode(PinConstants::SPI::CS0, OUTPUT);
     digitalWrite(PinConstants::SPI::CS0, HIGH);
@@ -128,13 +130,23 @@ void setup1()
 
 void loop1()
 {
-    if (commandDequeue.nextCommandAvailable())
+    mutex_enter_blocking(&commandMtx);
+    bool available = commandDequeue.nextCommandAvailable();
+    mutex_exit(&commandMtx);
+
+    if (available)
     {
         Command cmd;
-        Serial.println("fifo available");
-        bool success = commandDequeue.getNextCommand(&cmd);
+        Serial.printf("fifo available\n");
+        mutex_enter_blocking(&commandMtx);
+        int remaining = commandDequeue.getNextCommand(&cmd);
+        mutex_exit(&commandMtx);
 
-        if (!success) {
+        Serial.printf("remaining = %d\n", remaining);
+        Serial.printf("cmd type = %d\n", (uint8_t)cmd.commandType);
+
+        if (remaining == -1) {
+            Serial.printf("ERROR: no actual commands to process\n");
             return;
         }
 
@@ -246,7 +258,8 @@ void loop1()
             }
         }
 
-        delayMicroseconds(100);
+        Serial.print(F("ON="));
+        Serial.println(systemOn);
     }
 
     if (systemOn)
@@ -283,30 +296,23 @@ void loop()
     // If there's new data, process it
     if (newDataToParse)
     {
-        Serial.printf("Got new data\n");
         uint8_t buf[PinConstants::I2C::ReceiveBufSize];
         // Copy our new data
         mutex_enter_blocking(&i2cCommandMtx);
         memcpy(buf, (const void *)receiveBuf, PinConstants::I2C::ReceiveBufSize);
         mutex_exit(&i2cCommandMtx);
-        // Serial.printf("Rec data buffer=\t");
-        // for (int i = 0; i < 16; i++)
-        // {
-        //     Serial.printf("%X ", receiveBuf[i]);
-        // }
-        // Serial.println();
+        Serial.printf("Rec data buffer=\t");
+        for (int i = 0; i < 16; i++)
+        {
+            Serial.printf("%X ", receiveBuf[i]);
+        }
+        Serial.println();
         Command cmdTemp;
         CommandParser::parseCommand(buf, PinConstants::I2C::ReceiveBufSize, &cmdTemp);
 
         command = cmdTemp;
-        
 
         newDataToParse = false;
-        newData = true;
-    }
-
-    if (newData)
-    {
         newData = false;
         // Serial.printf("Command struct=\t");
         // for (int i = 0; i < sizeof(command); i++)
@@ -318,31 +324,38 @@ void loop()
         {
         case CommandType::On:
         {
-            // Go back to running the current color and pattern
+            mutex_enter_blocking(&commandMtx);
             commandDequeue.pushCommand(command);
+            mutex_exit(&commandMtx);
+            // Go back to running the current color and pattern
             break;
         }
 
         case CommandType::Off:
         {
+            mutex_enter_blocking(&commandMtx);
             // Set LEDs to black and stop running the pattern
             commandDequeue.pushCommand(command);
+            mutex_exit(&commandMtx);
             break;
         }
 
         case CommandType::Pattern:
         {
+            mutex_enter_blocking(&commandMtx);
             // To set everything to a certain color, change color then call
             // the 'set all' pattern
-            Serial.println("pattern pushing to fifo");
+            
             commandDequeue.pushCommand(command);
+            mutex_exit(&commandMtx);
             break;
         }
 
         case CommandType::ChangeColor:
         {
-            Serial.println("color pushing to fifo");
+            mutex_enter_blocking(&commandMtx);
             commandDequeue.pushCommand(command);
+            mutex_exit(&commandMtx);
             break;
         }
 
@@ -394,28 +407,31 @@ void loop()
 
         case CommandType::SetPatternZone:
         {
+            mutex_enter_blocking(&commandMtx);
             commandDequeue.pushCommand(command);
+            mutex_exit(&commandMtx);
             break;
         }
 
         case CommandType::SetNewZones:
         {
+            mutex_enter_blocking(&commandMtx);
             commandDequeue.pushCommand(command);
+            mutex_exit(&commandMtx);
             break;
         }
 
         case CommandType::SyncStates:
         {
+            mutex_enter_blocking(&commandMtx);
             commandDequeue.pushCommand(command);
+            mutex_exit(&commandMtx);
             break;
         }
 
         default:
             break;
         }
-
-        Serial.print(F("ON="));
-        Serial.println(systemOn);
     }
 
 #ifdef ENABLE_RADIO
@@ -443,10 +459,8 @@ void handleRadioDataReceive(Message msg)
 
 void receiveEvent(int howMany)
 {
-    mutex_enter_blocking(&i2cCommandMtx);
     Wire.readBytes((uint8_t *)receiveBuf, howMany);
     newDataToParse = true;
-    mutex_exit(&i2cCommandMtx);
 }
 
 void requestEvent()
