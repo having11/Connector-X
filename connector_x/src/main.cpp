@@ -216,6 +216,12 @@ void loop1()
                 break;
             }
 
+            case CommandType::SetLedPort:
+            {
+                ledPort = cmd.commandData.commandSetLedPort.port;
+                break;
+            }
+
             case CommandType::SetPatternZone:
             {
                 CommandSetPatternZone data = cmd.commandData.commandSetPatternZone;
@@ -361,7 +367,9 @@ void loop()
 
         case CommandType::SetLedPort:
         {
-            ledPort = command.commandData.commandSetLedPort.port;
+            mutex_enter_blocking(&commandMtx);
+            commandDequeue.pushCommand(command);
+            mutex_exit(&commandMtx);
             break;
         }
 
