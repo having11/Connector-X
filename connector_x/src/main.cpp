@@ -606,7 +606,8 @@ void initI2C0(void)
     Wire.setSCL(PinConstants::I2C::Port0::SCL);
     Wire.onReceive(receiveEvent); // register events
     Wire.onRequest(requestEvent);
-    Wire.begin(i2cAddress); // join i2c bus as slave
+    // TODO:
+    Wire.begin(0x17); // join i2c bus as slave
 }
 
 void initPixels(LedConfiguration *config, uint8_t port)
