@@ -26,6 +26,14 @@ static mutex_t commandMtx;
 // Give Core1 8K of stack space
 bool core1_separate_stack = true;
 
+static std::vector<ZoneDefinition> ledZones = {
+    ZoneDefinition{0, 9},
+    ZoneDefinition{9, 15},
+    ZoneDefinition{24, 8},
+    ZoneDefinition{32, 5},
+    ZoneDefinition{37, 5},
+};
+
 // Forward declarations
 void receiveEvent(int);
 void requestEvent(void);
@@ -69,15 +77,15 @@ void setup()
 
     EEPROM.begin(PinConstants::CONFIG::EepromSize);
 
-    Serial.begin(UartBaudRate);
+    // Serial.begin(UartBaudRate);
 
     rp2040.idleOtherCore();
     config = configurator.begin();
 
     // Peripherals
-    delay(4000);
+    delay(3000);
     initI2C0();
-    Serial.println("I20 init done");
+    // Serial.println("I20 init done");
 
     SPI1.setTX(PinConstants::SPI::MOSI);
     SPI1.setRX(PinConstants::SPI::MISO);
@@ -102,7 +110,7 @@ void setup()
         digitalWrite(pin.second, LOW);
     }
 
-    Serial.println("Initializing pixels");
+    // Serial.println("Initializing pixels");
     initPixels(&config.led0, 0);
     initPixels(&config.led1, 1);
 
@@ -118,14 +126,14 @@ void setup()
     }
 #endif
 
-    Serial.printf("Got config:\r\n%s\r\n",
-                  Configurator::toString(config).c_str());
+    // Serial.printf("Got config:\r\n%s\r\n",
+    //               Configurator::toString(config).c_str());
 }
 
 void setup1()
 {
     delay(2000);
-    Serial.println("Setup1 has ended");
+    // Serial.println("Setup1 has ended");
 }
 
 void loop1()
@@ -137,16 +145,16 @@ void loop1()
     if (available)
     {
         Command cmd;
-        Serial.printf("fifo available\n");
+        // Serial.printf("fifo available\n");
         mutex_enter_blocking(&commandMtx);
         int remaining = commandDequeue.getNextCommand(&cmd);
         mutex_exit(&commandMtx);
 
-        Serial.printf("remaining = %d\n", remaining);
-        Serial.printf("cmd type = %d\n", (uint8_t)cmd.commandType);
+        // Serial.printf("remaining = %d\n", remaining);
+        // Serial.printf("cmd type = %d\n", (uint8_t)cmd.commandType);
 
         if (remaining == -1) {
-            Serial.printf("ERROR: no actual commands to process\n");
+            // Serial.printf("ERROR: no actual commands to process\n");
             return;
         }
 
@@ -154,7 +162,7 @@ void loop1()
         {
             case CommandType::On:
             {
-                Serial.println("Switching to on");
+                // Serial.println("Switching to on");
                 // Go back to running the current color and pattern
                 for (int i = 0; i < PinConstants::LED::NumPorts; i++)
                 {
@@ -166,7 +174,7 @@ void loop1()
 
             case CommandType::Off:
             {
-                Serial.println("Switching to off");
+                // Serial.println("Switching to off");
                 // Set LEDs to black and stop running the pattern
                 for (uint8_t port = 0; port < PinConstants::LED::NumPorts; port++)
                 {
@@ -237,12 +245,12 @@ void loop1()
                 CommandSetNewZones data = cmd.commandData.commandSetNewZones;
                 auto* zoneDefs = new std::vector<ZoneDefinition>();
 
-                Serial.printf("Seting up %d new zones\r\n", data.zoneCount);
+                // Serial.printf("Seting up %d new zones\r\n", data.zoneCount);
 
                 for (uint8_t i = 0; i < data.zoneCount; i++)
                 {
                     zoneDefs->push_back(ZoneDefinition(data.zones[i]));
-                    Serial.printf("Zone: %s\r\n", zoneDefs->at(i).toString().c_str());
+                    // Serial.printf("Zone: %s\r\n", zoneDefs->at(i).toString().c_str());
                 }
 
                 auto& ledConfig = ledPort == 0 ? config.led0 : config.led1;
@@ -250,7 +258,7 @@ void loop1()
                 zones[ledPort] = std::make_unique<PatternZone>(
                     ledPort, ledConfig.brightness, pixels[ledPort], zoneDefs);
 
-                Serial.printf("Set %d new zones\r\n", data.zoneCount);
+                // Serial.printf("Set %d new zones\r\n", data.zoneCount);
 
                 break;
             }
@@ -264,8 +272,8 @@ void loop1()
             }
         }
 
-        Serial.print(F("ON="));
-        Serial.println(systemOn);
+        // Serial.print(F("ON="));
+        // Serial.println(systemOn);
     }
 
     if (systemOn)
@@ -307,12 +315,12 @@ void loop()
         mutex_enter_blocking(&i2cCommandMtx);
         memcpy(buf, (const void *)receiveBuf, PinConstants::I2C::ReceiveBufSize);
         mutex_exit(&i2cCommandMtx);
-        Serial.printf("Rec data buffer=\t");
-        for (int i = 0; i < 16; i++)
-        {
-            Serial.printf("%X ", receiveBuf[i]);
-        }
-        Serial.println();
+        // Serial.printf("Rec data buffer=\t");
+        // for (int i = 0; i < 16; i++)
+        // {
+        //     Serial.printf("%X ", receiveBuf[i]);
+        // }
+        // Serial.println();
         Command cmdTemp;
         CommandParser::parseCommand(buf, PinConstants::I2C::ReceiveBufSize, &cmdTemp);
 
@@ -392,8 +400,8 @@ void loop()
         case CommandType::SetConfig:
         {
             config = command.commandData.commandSetConfig.config;
-            Serial.println("Storing new config=");
-            Serial.println(configurator.toString(config).c_str());
+            // Serial.println("Storing new config=");
+            // Serial.println(configurator.toString(config).c_str());
             configurator.storeConfig(config);
             break;
         }
@@ -450,17 +458,17 @@ void loop()
 void handleRadioDataReceive(Message msg)
 {
     mutex_enter_blocking(&radioDataMtx);
-    Serial.println("New data:");
-    Serial.printf("Team = %d\n", msg.teamNumber);
-    Serial.printf("Data len = %d\n", msg.len);
-    Serial.print("Data (HEX) = ");
+    // Serial.println("New data:");
+    // Serial.printf("Team = %d\n", msg.teamNumber);
+    // Serial.printf("Data len = %d\n", msg.len);
+    // Serial.print("Data (HEX) = ");
 
-    for (uint8_t i = 0; i < msg.len; i++)
-    {
-        Serial.printf("%02X ", msg.data[i]);
-    }
+    // for (uint8_t i = 0; i < msg.len; i++)
+    // {
+    //     Serial.printf("%02X ", msg.data[i]);
+    // }
 
-    Serial.println();
+    // Serial.println();
 
     mutex_exit(&radioDataMtx);
 }
@@ -592,7 +600,7 @@ void initI2C0(void)
         (addr1Val << 1) |
         (addr0Val);
 
-    Serial.printf("I2C address DEC=%d\n", i2cAddress);
+    // Serial.printf("I2C address DEC=%d\n", i2cAddress);
 
     Wire.setSDA(PinConstants::I2C::Port0::SDA);
     Wire.setSCL(PinConstants::I2C::Port0::SCL);
@@ -603,23 +611,27 @@ void initI2C0(void)
 
 void initPixels(LedConfiguration *config, uint8_t port)
 {
-    Serial.println("Pixel start");
-    auto* strip = new CRGB[config->count];
+    // Serial.println("Pixel start");
+    // auto* strip = new CRGB[config->count];
+    // TODO:
+    auto* strip = new CRGB[42];
     pixels[port] = strip;
 
     if (port == 0)
     {
-        FastLED.addLeds<WS2812, PinConstants::LED::Dout0, RGB>(strip, config->count);
+        // TODO: count
+        FastLED.addLeds<WS2812, PinConstants::LED::Dout0, RGB>(strip, 42);
     }
     else if (port == 1)
     {
-        FastLED.addLeds<WS2812, PinConstants::LED::Dout1, GRB>(strip, config->count);
+        // TODO: count
+        FastLED.addLeds<WS2812, PinConstants::LED::Dout1, GRB>(strip, 42);
     }
 
     // TODO: Make the # of zones configurable
-    zones[port] = std::make_unique<PatternZone>(port, config->brightness, strip, config->count, 4);
+    zones[port] = std::make_unique<PatternZone>(port, 80, strip, &ledZones);
 
-    Serial.printf("zones size=%d\r\n", zones[port]->_zones->size());
+    // Serial.printf("zones size=%d\r\n", zones[port]->_zones->size());
 
     FastLED[port].clearLedData();
     strip[0] = CRGB(255, 127, 31);
@@ -628,5 +640,5 @@ void initPixels(LedConfiguration *config, uint8_t port)
     // Initialize all LEDs to black
     Animation::executePatternSetAll(strip, 0, 0, FastLED[port].size());
     FastLED[port].showLeds();
-    Serial.println("Pixel end");
+    // Serial.println("Pixel end");
 }

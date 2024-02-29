@@ -10,8 +10,8 @@ namespace CommandParser
     static void parseCommand(uint8_t *buf, size_t len, Command *cmd)
     {
         auto type = (CommandType)buf[0];
-        Serial.print("Received command type=");
-        Serial.println(buf[0]);
+        // Serial.print("Received command type=");
+        // Serial.println(buf[0]);
         cmd->commandType = type;
         switch (type)
         {

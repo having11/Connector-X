@@ -16,11 +16,11 @@ PatternZone::PatternZone(uint8_t port, uint8_t brightness,
         _runZones->push_back(RunZone(i, false));
     }
 
-    Serial.printf("Zone size=%d\r\n", _zones->size());
-    for (uint16_t i = 0; i < _zones->size(); i++)
-    {
-        Serial.println(_zones->at(i).toString().c_str());
-    }
+    // Serial.printf("Zone size=%d\r\n", _zones->size());
+    // for (uint16_t i = 0; i < _zones->size(); i++)
+    // {
+    //     Serial.println(_zones->at(i).toString().c_str());
+    // }
 }
 
 PatternZone::PatternZone(uint8_t port, uint8_t brightness,
@@ -28,13 +28,13 @@ PatternZone::PatternZone(uint8_t port, uint8_t brightness,
     : _leds(leds), _port(port), _brightness(brightness)
 {
     _zones.reset(zones);
-    for (uint8_t i = 0; i < _zones->size(); i++)
-    {
-        Serial.printf("Zone: %s\r\n", _zones->at(i).toString().c_str());
-    }
+    // for (uint8_t i = 0; i < _zones->size(); i++)
+    // {
+    //     Serial.printf("Zone: %s\r\n", _zones->at(i).toString().c_str());
+    // }
     _runZones = std::make_unique<std::vector<RunZone>>();
 
-    Serial.printf("Zone size=%d\r\n", _zones->size());
+    // Serial.printf("Zone size=%d\r\n", _zones->size());
     for (uint16_t i = 0; i < _zones->size(); i++)
     {
         _runZones->push_back(RunZone(i, false));
@@ -137,8 +137,8 @@ void PatternZone::updateZone(uint16_t index, bool forceUpdate)
                 runZone.reset();
             }
 
-            Serial.printf("Reset zone index=%u, state=%d, lastUpdate=%lu\r\n",
-                index, runZone.state, runZone.lastUpdateMs);
+            // Serial.printf("Reset zone index=%u, state=%d, lastUpdate=%lu\r\n",
+            //     index, runZone.state, runZone.lastUpdateMs);
         }
 
         if (incrementState(index, curPattern)) {
