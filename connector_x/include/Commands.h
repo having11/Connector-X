@@ -105,7 +105,7 @@ struct CommandDigitalRead
 
 struct CommandSetConfig
 {
-    Configuration config;
+    // Configuration config;
 };
 
 struct CommandReadConfig
@@ -114,7 +114,7 @@ struct CommandReadConfig
 
 struct CommandRadioSend
 {
-    Message msg;
+    // Message msg;
 };
 
 struct CommandRadioGetLatestReceived
@@ -199,12 +199,12 @@ struct ResponseDigitalRead
 
 struct ResponseRadioLastReceived
 {
-    Message msg;
+    // Message msg;
 };
 
 struct ResponseReadConfiguration
 {
-    Configuration config;
+    // Configuration config;
 };
 
 struct ResponseReadColor

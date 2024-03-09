@@ -56,7 +56,7 @@ namespace CommandParser
             break;
 
         case CommandType::SetConfig:
-            memcpy(&cmd->commandData.commandSetConfig.config, &buf[1],
+            memcpy(&cmd->commandData.commandSetConfig, &buf[1],
                    sizeof(CommandSetConfig));
             break;
 
@@ -65,7 +65,7 @@ namespace CommandParser
             break;
 
         case CommandType::RadioSend:
-            memcpy(&cmd->commandData.commandRadioSend.msg, &buf[1],
+            memcpy(&cmd->commandData.commandRadioSend, &buf[1],
                    sizeof(CommandRadioSend));
             break;
 

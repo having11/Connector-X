@@ -6,6 +6,7 @@
 #include <LittleFS.h>
 
 #include "Constants.h"
+#include "Configuration.h"
 
 #include <math.h>
 
@@ -16,8 +17,6 @@
  */
 typedef bool (*ExecutePatternCallback)(CRGB *strip, uint32_t color,
                                        uint16_t state, uint16_t ledCount);
-
-extern FastLED_NeoMatrix *matrix;
 
 enum class PatternType
 {
@@ -243,6 +242,8 @@ namespace Animation
 
     static bool executePatternAngryEyes(CRGB *strip, uint32_t color,
                                         uint16_t state, uint16_t ledCount) {
+        FastLED_NeoMatrix *matrix = new FastLED_NeoMatrix(strip, configuration.led1.matrix.width,
+            configuration.led1.matrix.height, configuration.led1.matrix.flags);
         if (ledCount != matrix->width() * matrix->height()) {
             return false;
         }
@@ -256,6 +257,8 @@ namespace Animation
 
     static bool executePatternHappyEyes(CRGB *strip, uint32_t color,
                                         uint16_t state, uint16_t ledCount) {
+        FastLED_NeoMatrix *matrix = new FastLED_NeoMatrix(strip, configuration.led1.matrix.width,
+            configuration.led1.matrix.height, configuration.led1.matrix.flags);
         if (ledCount != matrix->width() * matrix->height()) {
             return false;
         }
@@ -269,6 +272,8 @@ namespace Animation
                                     
     static bool executePatternBlinkingEyes(CRGB *strip, uint32_t color,
                                         uint16_t state, uint16_t ledCount) {
+        FastLED_NeoMatrix *matrix = new FastLED_NeoMatrix(strip, configuration.led1.matrix.width,
+            configuration.led1.matrix.height, configuration.led1.matrix.flags);
         if (ledCount != matrix->width() * matrix->height()) {
             return false;
         }
@@ -282,6 +287,8 @@ namespace Animation
 
     static bool executePatternSurprisedEyes(CRGB *strip, uint32_t color,
                                         uint16_t state, uint16_t ledCount) {
+        FastLED_NeoMatrix *matrix = new FastLED_NeoMatrix(strip, configuration.led1.matrix.width,
+            configuration.led1.matrix.height, configuration.led1.matrix.flags);
         if (ledCount != matrix->width() * matrix->height()) {
             return false;
         }

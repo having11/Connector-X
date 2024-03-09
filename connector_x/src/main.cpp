@@ -14,6 +14,7 @@
 #include "CommandParser.h"
 #include "Commands.h"
 #include "Configurator.h"
+#include "Configuration.h"
 #include "Constants.h"
 #include "PacketRadio.h"
 #include "PatternZone.h"
@@ -30,21 +31,13 @@ static mutex_t commandMtx;
 // Give Core1 8K of stack space
 bool core1_separate_stack = true;
 
-static std::vector<ZoneDefinition> ledZones = {
-    ZoneDefinition{0, 9},
-    ZoneDefinition{9, 15},
-    ZoneDefinition{24, 8},
-    ZoneDefinition{32, 5},
-    ZoneDefinition{37, 5},
-};
-
 // Forward declarations
 void receiveEvent(int);
 void requestEvent(void);
 void handleRadioDataReceive(Message msg);
 void centralRespond(Response response);
 void initI2C0(void);
-void initPixels(LedConfiguration *config, uint8_t port);
+void initPixels(uint8_t port);
 
 CRGB *getPixels(uint8_t port);
 
@@ -52,15 +45,10 @@ static volatile uint8_t receiveBuf[PinConstants::I2C::ReceiveBufSize];
 static volatile bool newData = false;
 static volatile bool newDataToParse = false;
 
-static Configuration config;
-static Configurator configurator;
 static volatile uint8_t ledPort = 0;
 
 static CRGB *pixels[PinConstants::LED::NumPorts];
 static std::unique_ptr<PatternZone> zones[PinConstants::LED::NumPorts];
-
-FastLED_NeoMatrix *matrix = new FastLED_NeoMatrix(pixels[1] + 1, Matrix::Width, Matrix::Height,
-    NEO_MATRIX_BOTTOM + NEO_MATRIX_RIGHT + NEO_MATRIX_COLUMNS + NEO_MATRIX_ZIGZAG);
 
 #ifdef ENABLE_RADIO
 static PacketRadio *radio;
@@ -82,10 +70,10 @@ void setup()
 
     EEPROM.begin(PinConstants::CONFIG::EepromSize);
 
-    // Serial.begin(UartBaudRate);
+    Serial.begin(UartBaudRate);
 
     rp2040.idleOtherCore();
-    config = configurator.begin();
+    // config = configurator.begin();
 
     // Peripherals
     delay(3000);
@@ -122,8 +110,9 @@ void setup()
     }
 
     // Serial.println("Initializing pixels");
-    initPixels(&config.led0, 0);
-    initPixels(&config.led1, 1);
+    // TODO: make into a loop
+    initPixels(0);
+    initPixels(1);
 
     rp2040.resumeOtherCore();
     rp2040.restartCore1();
@@ -155,7 +144,7 @@ void loop1()
 
     if (available)
     {
-        Command cmd;
+        Command cmd{};
         // Serial.printf("fifo available\n");
         mutex_enter_blocking(&commandMtx);
         int remaining = commandDequeue.getNextCommand(&cmd);
@@ -260,11 +249,11 @@ void loop1()
 
                 for (uint8_t i = 0; i < data.zoneCount; i++)
                 {
-                    zoneDefs->push_back(ZoneDefinition(data.zones[i]));
+                    zoneDefs->push_back(ZoneDefinition(data.zones[i].offset, data.zones[i].count));
                     // Serial.printf("Zone: %s\r\n", zoneDefs->at(i).toString().c_str());
                 }
 
-                auto& ledConfig = ledPort == 0 ? config.led0 : config.led1;
+                auto& ledConfig = ledPort == 0 ? configuration.led0 : configuration.led1;
 
                 zones[ledPort] = std::make_unique<PatternZone>(
                     ledPort, ledConfig.brightness, pixels[ledPort], zoneDefs);
@@ -332,7 +321,7 @@ void loop()
         //     Serial.printf("%X ", receiveBuf[i]);
         // }
         // Serial.println();
-        Command cmdTemp;
+        Command cmdTemp{};
         CommandParser::parseCommand(buf, PinConstants::I2C::ReceiveBufSize, &cmdTemp);
 
         command = cmdTemp;
@@ -410,10 +399,10 @@ void loop()
 
         case CommandType::SetConfig:
         {
-            config = command.commandData.commandSetConfig.config;
-            // Serial.println("Storing new config=");
-            // Serial.println(configurator.toString(config).c_str());
-            configurator.storeConfig(config);
+            // config = command.commandData.commandSetConfig.config;
+            // // Serial.println("Storing new config=");
+            // // Serial.println(configurator.toString(config).c_str());
+            // configurator.storeConfig(config);
             break;
         }
 
@@ -492,7 +481,7 @@ void receiveEvent(int howMany)
 
 void requestEvent()
 {
-    Response res;
+    Response res{};
     res.commandType = command.commandType;
     // Serial.printf("Sending back command=%d\n", (uint8_t)res.commandType);
 
@@ -535,8 +524,7 @@ void requestEvent()
 
     case CommandType::ReadConfig:
     {
-        auto cfg = configurator.readConfig();
-        res.responseData.responseReadConfiguration.config = cfg;
+        // res.responseData.responseReadConfiguration.config = configuration;
         break;
     }
 
@@ -621,29 +609,49 @@ void initI2C0(void)
     Wire.begin(0x17); // join i2c bus as slave
 }
 
-void initPixels(LedConfiguration *config, uint8_t port)
+void initPixels(uint8_t port)
 {
     // Serial.println("Pixel start");
     // auto* strip = new CRGB[config->count];
 
+    uint16_t ledCount;
+    std::vector<ZoneDefinition> ledZones;
+    LedConfiguration config;
+
+    if (port == 0) {
+        config = configuration.led0;
+    } else {
+        config = configuration.led1;
+    }
+
+    if (!config.isMatrix) {
+        ledCount = config.strip.count;
+
+        if (config.strip.zoneCount != -1) {
+            for (uint8_t i = 0; i < config.strip.zoneCount; i++) {
+                ledZones.push_back(config.strip.initialZones[i]);
+            }
+        } else {
+            ledZones.push_back(ZoneDefinition{0, ledCount});
+        }
+    } else {
+        ledCount = (config.matrix.width * config.matrix.height) + 1;
+
+        ledZones.push_back(ZoneDefinition{0, 1});
+        ledZones.push_back(ZoneDefinition{1, ledCount - 1});
+    }
+
+    auto* strip = new CRGB[ledCount];
+    pixels[port] = strip;
+    zones[port] = std::make_unique<PatternZone>(port, config.brightness, pixels[port], &ledZones);
+
     if (port == 0)
     {
-        // TODO:
-        auto* strip = new CRGB[42];
-        pixels[port] = strip;
-        // TODO: count
-        FastLED.addLeds<WS2812, PinConstants::LED::Dout0, RGB>(strip, 42);
-        // TODO: Make the # of zones configurable
-        zones[port] = std::make_unique<PatternZone>(port, 80, pixels[port], &ledZones);
+        FastLED.addLeds<WS2812, PinConstants::LED::Dout0, RGB>(pixels[port], ledCount);
     }
-    else if (port == 1)
+    else
     {
-        // TODO:
-        auto* strip = new CRGB[Matrix::Width * Matrix::Height + 1];
-        pixels[port] = strip;
-        // TODO: count
-        FastLED.addLeds<WS2812, PinConstants::LED::Dout1, GRB>(strip, Matrix::Width * Matrix::Height + 1);
-        zones[port] = std::make_unique<PatternZone>(port, 80, pixels[port] + 1, Matrix::Width * Matrix::Height);
+        FastLED.addLeds<WS2812, PinConstants::LED::Dout1, GRB>(pixels[port], ledCount);
     }
 
     // Serial.printf("zones size=%d\r\n", zones[port]->_zones->size());
