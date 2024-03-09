@@ -7,6 +7,10 @@
 
 #include <pico/mutex.h>
 
+#include <Adafruit_GFX.h>
+#include <FastLED_NeoMatrix.h>
+#include <LittleFS.h>
+
 #include "CommandParser.h"
 #include "Commands.h"
 #include "Configurator.h"
@@ -55,7 +59,9 @@ static volatile uint8_t ledPort = 0;
 static CRGB *pixels[PinConstants::LED::NumPorts];
 // TODO: Make this an array of arrays -> Each port can have multiple zones
 static std::unique_ptr<PatternZone> zones[PinConstants::LED::NumPorts];
-// static PatternRunner *patternRunners[PinConstants::LED::NumPorts];
+
+FastLED_NeoMatrix *matrix = new FastLED_NeoMatrix(pixels[1] + 1, Matrix::Width, Matrix::Height,
+    NEO_MATRIX_BOTTOM + NEO_MATRIX_RIGHT + NEO_MATRIX_COLUMNS + NEO_MATRIX_ZIGZAG);
 
 #ifdef ENABLE_RADIO
 static PacketRadio *radio;
@@ -100,6 +106,12 @@ void setup()
     mutex_init(&i2cCommandMtx);
     mutex_init(&radioDataMtx);
     mutex_init(&commandMtx);
+
+    LittleFSConfig cfg;
+    cfg.setAutoFormat(false);
+    LittleFS.setConfig(cfg);
+
+    LittleFS.begin();
 
     pinMode(PinConstants::SPI::CS0, OUTPUT);
     digitalWrite(PinConstants::SPI::CS0, HIGH);
@@ -614,32 +626,35 @@ void initPixels(LedConfiguration *config, uint8_t port)
 {
     // Serial.println("Pixel start");
     // auto* strip = new CRGB[config->count];
-    // TODO:
-    auto* strip = new CRGB[42];
-    pixels[port] = strip;
 
     if (port == 0)
     {
+        // TODO:
+        auto* strip = new CRGB[42];
+        pixels[port] = strip;
         // TODO: count
         FastLED.addLeds<WS2812, PinConstants::LED::Dout0, RGB>(strip, 42);
+        // TODO: Make the # of zones configurable
+        zones[port] = std::make_unique<PatternZone>(port, 80, pixels[port], &ledZones);
     }
     else if (port == 1)
     {
+        // TODO:
+        auto* strip = new CRGB[Matrix::Width * Matrix::Height + 1];
+        pixels[port] = strip;
         // TODO: count
-        FastLED.addLeds<WS2812, PinConstants::LED::Dout1, GRB>(strip, 42);
+        FastLED.addLeds<WS2812, PinConstants::LED::Dout1, GRB>(strip, Matrix::Width * Matrix::Height + 1);
+        zones[port] = std::make_unique<PatternZone>(port, 80, pixels[port] + 1, Matrix::Width * Matrix::Height);
     }
-
-    // TODO: Make the # of zones configurable
-    zones[port] = std::make_unique<PatternZone>(port, 80, strip, &ledZones);
 
     // Serial.printf("zones size=%d\r\n", zones[port]->_zones->size());
 
     FastLED[port].clearLedData();
-    strip[0] = CRGB(255, 127, 31);
+    pixels[port][0] = CRGB(255, 127, 31);
     FastLED[port].showLeds();
     delay(1000);
     // Initialize all LEDs to black
-    Animation::executePatternSetAll(strip, 0, 0, FastLED[port].size());
+    Animation::executePatternSetAll(pixels[port], 0, 0, FastLED[port].size());
     FastLED[port].showLeds();
     // Serial.println("Pixel end");
 }

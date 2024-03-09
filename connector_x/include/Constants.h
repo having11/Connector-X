@@ -81,7 +81,7 @@ namespace Radio
 } // namespace Radio
 
 constexpr uint32_t UartBaudRate = 115200;
-constexpr uint8_t PatternCount = 8;
+constexpr uint8_t PatternCount = 11;
 
 namespace Animation
 {
@@ -90,4 +90,10 @@ namespace Animation
     constexpr uint8_t chaseWidth = 5;
     constexpr uint16_t chaseSpacing = 10;
     constexpr uint16_t chaseRepeatWidth = chaseWidth + chaseSpacing;
+}
+
+namespace Matrix
+{
+    constexpr uint8_t Width = 32;
+    constexpr uint8_t Height = 8;
 }

@@ -1,6 +1,9 @@
 #pragma once
 
+#include <Adafruit_GFX.h>
+#include <FastLED_NeoMatrix.h>
 #include <FastLED.h>
+#include <LittleFS.h>
 
 #include "Constants.h"
 
@@ -14,6 +17,8 @@
 typedef bool (*ExecutePatternCallback)(CRGB *strip, uint32_t color,
                                        uint16_t state, uint16_t ledCount);
 
+extern FastLED_NeoMatrix *matrix;
+
 enum class PatternType
 {
     None = 0,
@@ -24,6 +29,9 @@ enum class PatternType
     Breathing = 5,
     SineRoll = 6,
     Chase = 7,
+    AngryEyes = 20,
+    HappyEyes = 21,
+    BlinkingEyes = 22,
 };
 
 enum class PatternStateMode
@@ -41,6 +49,49 @@ struct Pattern
     uint16_t changeDelayDefault;
     ExecutePatternCallback cb;
 };
+
+struct bmp_file_header_t {
+  uint16_t signature;
+  uint32_t file_size;
+  uint16_t reserved[2];
+  uint32_t image_offset;
+};
+
+struct bmp_image_header_t {
+  uint32_t header_size;
+  uint32_t image_width;
+  uint32_t image_height;
+  uint16_t color_planes;
+  uint16_t bits_per_pixel;
+  uint32_t compression_method;
+  uint32_t image_size;
+  uint32_t horizontal_resolution;
+  uint32_t vertical_resolution;
+  uint32_t colors_in_palette;
+  uint32_t important_colors;
+};
+
+// Call delete[] on the returned value after done using
+static uint8_t* getBitmapBytes(String filePath) {
+    File file = LittleFS.open(filePath, "r");
+    bmp_file_header_t fileHeader;
+    file.readBytes((char*)&fileHeader, sizeof(fileHeader));
+    bmp_image_header_t imageHeader;
+    file.readBytes((char*)&imageHeader, sizeof(imageHeader));
+
+    if (imageHeader.bits_per_pixel == 16) {
+        file.seek(fileHeader.image_offset);
+        uint32_t totalSize = imageHeader.image_width * imageHeader.image_height * 2;
+        uint8_t* bytes = new uint8_t[totalSize];
+        file.readBytes((char*)bytes, totalSize);
+
+        file.close();
+        return bytes;
+    }
+
+    file.close();
+    return nullptr;
+}
 
 static void setColorScaled(CRGB *strip, uint16_t ledNumber, byte red, byte green, byte blue, byte scaling)
 {
@@ -189,6 +240,45 @@ namespace Animation
         return true;
     }
 
+    static bool executePatternAngryEyes(CRGB *strip, uint32_t color,
+                                        uint16_t state, uint16_t ledCount) {
+        if (ledCount != matrix->width() * matrix->height()) {
+            return false;
+        }
+
+        String filePath = String("/angry_eyes/") + String(state) + String(".bmp");
+        uint8_t* bytes = getBitmapBytes(filePath);
+        matrix->drawRGBBitmap(0, 0, (uint16_t*)bytes, matrix->width(), matrix->height());
+        delete[] bytes;
+        return true;
+    }
+
+    static bool executePatternHappyEyes(CRGB *strip, uint32_t color,
+                                        uint16_t state, uint16_t ledCount) {
+        if (ledCount != matrix->width() * matrix->height()) {
+            return false;
+        }
+
+        String filePath = String("/happy_eyes/") + String(state) + String(".bmp");
+        uint8_t* bytes = getBitmapBytes(filePath);
+        matrix->drawRGBBitmap(0, 0, (uint16_t*)bytes, matrix->width(), matrix->height());
+        delete[] bytes;                     
+        return true;
+    }
+                                    
+    static bool executePatternBlinkingEyes(CRGB *strip, uint32_t color,
+                                        uint16_t state, uint16_t ledCount) {
+        if (ledCount != matrix->width() * matrix->height()) {
+            return false;
+        }
+
+        String filePath = String("/blinking_eyes/") + String(state) + String(".bmp");
+        uint8_t* bytes = getBitmapBytes(filePath);
+        matrix->drawRGBBitmap(0, 0, (uint16_t*)bytes, matrix->width(), matrix->height());
+        delete[] bytes;
+        return true;
+    }
+
     // ! The order of these MUST match the order in PatternType !
     static Pattern patterns[PatternCount] = {
         {.type = PatternType::None,
@@ -230,6 +320,21 @@ namespace Animation
          .mode = PatternStateMode::LedCount,
          .numStates = chaseWidth,
          .changeDelayDefault = 20,
-         .cb = Animation::executePatternChase}
+         .cb = Animation::executePatternChase},
+        {.type = PatternType::AngryEyes,
+         .mode = PatternStateMode::Constant,
+         .numStates = 5,
+         .changeDelayDefault = 1000,
+         .cb = Animation::executePatternAngryEyes},
+        {.type = PatternType::HappyEyes,
+         .mode = PatternStateMode::Constant,
+         .numStates = 4,
+         .changeDelayDefault = 1000,
+         .cb = Animation::executePatternHappyEyes},
+        {.type = PatternType::BlinkingEyes,
+         .mode = PatternStateMode::Constant,
+         .numStates = 5,
+         .changeDelayDefault = 1000,
+         .cb = Animation::executePatternBlinkingEyes},
     };
 } // namespace Animation
