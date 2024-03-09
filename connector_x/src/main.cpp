@@ -57,7 +57,6 @@ static Configurator configurator;
 static volatile uint8_t ledPort = 0;
 
 static CRGB *pixels[PinConstants::LED::NumPorts];
-// TODO: Make this an array of arrays -> Each port can have multiple zones
 static std::unique_ptr<PatternZone> zones[PinConstants::LED::NumPorts];
 
 FastLED_NeoMatrix *matrix = new FastLED_NeoMatrix(pixels[1] + 1, Matrix::Width, Matrix::Height,

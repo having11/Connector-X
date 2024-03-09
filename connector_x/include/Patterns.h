@@ -29,9 +29,10 @@ enum class PatternType
     Breathing = 5,
     SineRoll = 6,
     Chase = 7,
-    AngryEyes = 20,
-    HappyEyes = 21,
-    BlinkingEyes = 22,
+    AngryEyes = 8,
+    HappyEyes = 9,
+    BlinkingEyes = 10,
+    SurprisedEyes = 11,
 };
 
 enum class PatternStateMode
@@ -81,7 +82,7 @@ static uint8_t* getBitmapBytes(String filePath) {
 
     if (imageHeader.bits_per_pixel == 16) {
         file.seek(fileHeader.image_offset);
-        uint32_t totalSize = imageHeader.image_width * imageHeader.image_height * 2;
+        uint32_t totalSize = imageHeader.image_width * imageHeader.image_height * (imageHeader.bits_per_pixel / 8);
         uint8_t* bytes = new uint8_t[totalSize];
         file.readBytes((char*)bytes, totalSize);
 
@@ -279,6 +280,19 @@ namespace Animation
         return true;
     }
 
+    static bool executePatternSurprisedEyes(CRGB *strip, uint32_t color,
+                                        uint16_t state, uint16_t ledCount) {
+        if (ledCount != matrix->width() * matrix->height()) {
+            return false;
+        }
+
+        String filePath = String("/surprised_eyes/") + String(state) + String(".bmp");
+        uint8_t* bytes = getBitmapBytes(filePath);
+        matrix->drawRGBBitmap(0, 0, (uint16_t*)bytes, matrix->width(), matrix->height());
+        delete[] bytes;
+        return true;
+    }
+
     // ! The order of these MUST match the order in PatternType !
     static Pattern patterns[PatternCount] = {
         {.type = PatternType::None,
@@ -336,5 +350,10 @@ namespace Animation
          .numStates = 5,
          .changeDelayDefault = 1000,
          .cb = Animation::executePatternBlinkingEyes},
+        {.type = PatternType::SurprisedEyes,
+         .mode = PatternStateMode::Constant,
+         .numStates = 2,
+         .changeDelayDefault = 1000,
+         .cb = Animation::executePatternSurprisedEyes},
     };
 } // namespace Animation
