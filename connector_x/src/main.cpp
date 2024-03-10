@@ -15,6 +15,7 @@
 #include "Commands.h"
 #include "Configurator.h"
 #include "Configuration.h"
+#include "TestCommands.h"
 #include "Constants.h"
 #include "PacketRadio.h"
 #include "PatternZone.h"
@@ -38,6 +39,7 @@ void handleRadioDataReceive(Message msg);
 void centralRespond(Response response);
 void initI2C0(void);
 void initPixels(uint8_t port);
+void handleCommand(Command cmd);
 
 CRGB *getPixels(uint8_t port);
 
@@ -63,12 +65,14 @@ void setup()
 {
     pinMode(PinConstants::LED::AliveStatus, OUTPUT);
     digitalWrite(PinConstants::LED::AliveStatus, HIGH);
+    pinMode(PinConstants::CONFIG::ConfigSetupBtn, INPUT_PULLUP);
+    pinMode(PinConstants::CONFIG::ConfigLed, OUTPUT);
 
     Wire1.setSDA(PinConstants::I2C::Port1::SDA);
     Wire1.setSCL(PinConstants::I2C::Port1::SCL);
     Wire1.begin();
 
-    EEPROM.begin(PinConstants::CONFIG::EepromSize);
+    // EEPROM.begin(PinConstants::CONFIG::EepromSize);
 
     Serial.begin(UartBaudRate);
 
@@ -114,9 +118,6 @@ void setup()
     initPixels(0);
     initPixels(1);
 
-    rp2040.resumeOtherCore();
-    rp2040.restartCore1();
-
 #ifdef ENABLE_RADIO
     radio = new PacketRadio(&SPI1, config, handleRadioDataReceive);
 
@@ -128,6 +129,20 @@ void setup()
 
     // Serial.printf("Got config:\r\n%s\r\n",
     //               Configurator::toString(config).c_str());
+
+    delay(2000);
+    // Serial.println("Starting test sequence");
+    digitalWrite(PinConstants::CONFIG::ConfigLed, HIGH);
+
+    for (auto testCmd : testCommands) {
+        Serial.printf("Handling %d\n", (uint8_t)testCmd.cmd.commandType);
+        handleCommand(testCmd.cmd);
+    }
+
+    digitalWrite(PinConstants::CONFIG::ConfigLed, LOW);
+
+    rp2040.resumeOtherCore();
+    rp2040.restartCore1();
 }
 
 void setup1()
@@ -227,6 +242,7 @@ void loop1()
             case CommandType::SetLedPort:
             {
                 ledPort = cmd.commandData.commandSetLedPort.port;
+                // Serial.printf("Port=%d\n", ledPort);
                 break;
             }
 
@@ -334,120 +350,7 @@ void loop()
         //     Serial.printf("%X ", ((uint8_t *)&command)[i]);
         // }
         // Serial.println();
-        switch (command.commandType)
-        {
-        case CommandType::On:
-        {
-            mutex_enter_blocking(&commandMtx);
-            commandDequeue.pushCommand(command);
-            mutex_exit(&commandMtx);
-            // Go back to running the current color and pattern
-            break;
-        }
-
-        case CommandType::Off:
-        {
-            mutex_enter_blocking(&commandMtx);
-            // Set LEDs to black and stop running the pattern
-            commandDequeue.pushCommand(command);
-            mutex_exit(&commandMtx);
-            break;
-        }
-
-        case CommandType::Pattern:
-        {
-            mutex_enter_blocking(&commandMtx);
-            // To set everything to a certain color, change color then call
-            // the 'set all' pattern
-            
-            commandDequeue.pushCommand(command);
-            mutex_exit(&commandMtx);
-            break;
-        }
-
-        case CommandType::ChangeColor:
-        {
-            mutex_enter_blocking(&commandMtx);
-            commandDequeue.pushCommand(command);
-            mutex_exit(&commandMtx);
-            break;
-        }
-
-        case CommandType::SetLedPort:
-        {
-            mutex_enter_blocking(&commandMtx);
-            commandDequeue.pushCommand(command);
-            mutex_exit(&commandMtx);
-            break;
-        }
-
-        case CommandType::DigitalSetup:
-        {
-            auto cfg = command.commandData.commandDigitalSetup;
-            auto pin = PinConstants::DIGITALIO::digitalIOMap.at(cfg.port);
-            pinMode(pin, cfg.mode);
-            break;
-        }
-
-        case CommandType::DigitalWrite:
-        {
-            auto cfg = command.commandData.commandDigitalWrite;
-            auto pin = PinConstants::DIGITALIO::digitalIOMap.at(cfg.port);
-            digitalWrite(pin, cfg.value);
-            break;
-        }
-
-        case CommandType::SetConfig:
-        {
-            // config = command.commandData.commandSetConfig.config;
-            // // Serial.println("Storing new config=");
-            // // Serial.println(configurator.toString(config).c_str());
-            // configurator.storeConfig(config);
-            break;
-        }
-
-#ifdef ENABLE_RADIO
-        case CommandType::RadioSend:
-        {
-            auto message = command.commandData.commandRadioSend.msg;
-            if (message.teamNumber == Radio::SendToAll)
-            {
-                radio->sendToAll(message);
-            }
-            else
-            {
-                radio->send(message);
-            }
-        }
-#endif
-
-        case CommandType::SetPatternZone:
-        {
-            mutex_enter_blocking(&commandMtx);
-            commandDequeue.pushCommand(command);
-            mutex_exit(&commandMtx);
-            break;
-        }
-
-        case CommandType::SetNewZones:
-        {
-            mutex_enter_blocking(&commandMtx);
-            commandDequeue.pushCommand(command);
-            mutex_exit(&commandMtx);
-            break;
-        }
-
-        case CommandType::SyncStates:
-        {
-            mutex_enter_blocking(&commandMtx);
-            commandDequeue.pushCommand(command);
-            mutex_exit(&commandMtx);
-            break;
-        }
-
-        default:
-            break;
-        }
+        handleCommand(cmdTemp);
     }
 
 #ifdef ENABLE_RADIO
@@ -615,7 +518,7 @@ void initPixels(uint8_t port)
     // auto* strip = new CRGB[config->count];
 
     uint16_t ledCount;
-    std::vector<ZoneDefinition> ledZones;
+    auto* ledZones = new std::vector<ZoneDefinition>();
     LedConfiguration config;
 
     if (port == 0) {
@@ -629,21 +532,21 @@ void initPixels(uint8_t port)
 
         if (config.strip.zoneCount != -1) {
             for (uint8_t i = 0; i < config.strip.zoneCount; i++) {
-                ledZones.push_back(config.strip.initialZones[i]);
+                ledZones->push_back(config.strip.initialZones[i]);
             }
         } else {
-            ledZones.push_back(ZoneDefinition{0, ledCount});
+            ledZones->push_back(ZoneDefinition{0, ledCount});
         }
     } else {
         ledCount = (config.matrix.width * config.matrix.height) + 1;
 
-        ledZones.push_back(ZoneDefinition{0, 1});
-        ledZones.push_back(ZoneDefinition{1, ledCount - 1});
+        ledZones->push_back(ZoneDefinition{0, 1});
+        ledZones->push_back(ZoneDefinition{1, ledCount - 1});
     }
 
     auto* strip = new CRGB[ledCount];
     pixels[port] = strip;
-    zones[port] = std::make_unique<PatternZone>(port, config.brightness, pixels[port], &ledZones);
+    zones[port] = std::make_unique<PatternZone>(port, config.brightness, pixels[port], ledZones);
 
     if (port == 0)
     {
@@ -664,4 +567,122 @@ void initPixels(uint8_t port)
     Animation::executePatternSetAll(pixels[port], 0, 0, FastLED[port].size());
     FastLED[port].showLeds();
     // Serial.println("Pixel end");
+}
+
+void handleCommand(Command cmd)
+{
+    switch (cmd.commandType)
+    {
+    case CommandType::On:
+    {
+        mutex_enter_blocking(&commandMtx);
+        commandDequeue.pushCommand(cmd);
+        mutex_exit(&commandMtx);
+        // Go back to running the current color and pattern
+        break;
+    }
+
+    case CommandType::Off:
+    {
+        mutex_enter_blocking(&commandMtx);
+        // Set LEDs to black and stop running the pattern
+        commandDequeue.pushCommand(cmd);
+        mutex_exit(&commandMtx);
+        break;
+    }
+
+    case CommandType::Pattern:
+    {
+        mutex_enter_blocking(&commandMtx);
+        // To set everything to a certain color, change color then call
+        // the 'set all' pattern
+        
+        commandDequeue.pushCommand(cmd);
+        mutex_exit(&commandMtx);
+        break;
+    }
+
+    case CommandType::ChangeColor:
+    {
+        mutex_enter_blocking(&commandMtx);
+        commandDequeue.pushCommand(cmd);
+        mutex_exit(&commandMtx);
+        break;
+    }
+
+    case CommandType::SetLedPort:
+    {
+        mutex_enter_blocking(&commandMtx);
+        commandDequeue.pushCommand(cmd);
+        mutex_exit(&commandMtx);
+        break;
+    }
+
+    case CommandType::DigitalSetup:
+    {
+        auto cfg = cmd.commandData.commandDigitalSetup;
+        auto pin = PinConstants::DIGITALIO::digitalIOMap.at(cfg.port);
+        pinMode(pin, cfg.mode);
+        break;
+    }
+
+    case CommandType::DigitalWrite:
+    {
+        auto cfg = cmd.commandData.commandDigitalWrite;
+        auto pin = PinConstants::DIGITALIO::digitalIOMap.at(cfg.port);
+        digitalWrite(pin, cfg.value);
+        break;
+    }
+
+    case CommandType::SetConfig:
+    {
+        // config = command.commandData.commandSetConfig.config;
+        // // Serial.println("Storing new config=");
+        // // Serial.println(configurator.toString(config).c_str());
+        // configurator.storeConfig(config);
+        break;
+    }
+
+#ifdef ENABLE_RADIO
+    case CommandType::RadioSend:
+    {
+        auto message = command.commandData.commandRadioSend.msg;
+        if (message.teamNumber == Radio::SendToAll)
+        {
+            radio->sendToAll(message);
+        }
+        else
+        {
+            radio->send(message);
+        }
+    }
+#endif
+
+    case CommandType::SetPatternZone:
+    {
+        mutex_enter_blocking(&commandMtx);
+        commandDequeue.pushCommand(cmd);
+        mutex_exit(&commandMtx);
+        break;
+    }
+
+    case CommandType::SetNewZones:
+    {
+        mutex_enter_blocking(&commandMtx);
+        commandDequeue.pushCommand(cmd);
+        mutex_exit(&commandMtx);
+        break;
+    }
+
+    case CommandType::SyncStates:
+    {
+        mutex_enter_blocking(&commandMtx);
+        commandDequeue.pushCommand(cmd);
+        mutex_exit(&commandMtx);
+        break;
+    }
+
+    default:
+        break;
+    }
 }

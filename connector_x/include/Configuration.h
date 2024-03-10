@@ -24,7 +24,7 @@ static Configuration configuration = {
                 ZoneDefinition{0, 0}
             },
         },
-        .brightness = 80,
+        .brightness = 20,
         .isMatrix = false,
     },
     .led1 = {
@@ -33,7 +33,7 @@ static Configuration configuration = {
             .height = Matrix::Height,
             .flags = NEO_MATRIX_BOTTOM + NEO_MATRIX_RIGHT + NEO_MATRIX_COLUMNS + NEO_MATRIX_ZIGZAG,
         },
-        .brightness = 40,
+        .brightness = 20,
         .isMatrix = true,
     }
 };
