@@ -373,7 +373,7 @@ namespace Animation
          .cb = Animation::executePatternAngryEyes},
         {.type = PatternType::HappyEyes,
          .mode = PatternStateMode::Constant,
-         .numStates = 4,
+         .numStates = 3,
          .changeDelayDefault = 1000,
          .cb = Animation::executePatternHappyEyes},
         {.type = PatternType::BlinkingEyes,
@@ -383,7 +383,7 @@ namespace Animation
          .cb = Animation::executePatternBlinkingEyes},
         {.type = PatternType::SurprisedEyes,
          .mode = PatternStateMode::Constant,
-         .numStates = 2,
+         .numStates = 1,
          .changeDelayDefault = 1000,
          .cb = Animation::executePatternSurprisedEyes},
     };

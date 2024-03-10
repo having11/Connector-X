@@ -61,15 +61,15 @@ bool PatternZone::runPattern(uint16_t index, Pattern *pattern, CRGB* pixels,
     auto& curZoneDef = getZoneDefinitionFromIndex(index);
     auto& runZone = getRunZoneFromIndex(index);
 
-    Serial.printf("Creating %d temp LED array\r\n", curZoneDef.count);
+    // Serial.printf("Creating %d temp LED array\r\n", curZoneDef.count);
 
     CRGB *tempLeds = new CRGB[curZoneDef.count];
     memset(tempLeds, 0, sizeof(CRGB) * curZoneDef.count);
 
-    Serial.printf("Created %d temp LED array\r\n", curZoneDef.count);
+    // Serial.printf("Created %d temp LED array\r\n", curZoneDef.count);
     // Serial.printf("Color=%lu, state=%u\r\n", runZone.color, runZone.state);
     bool shouldShow = pattern->cb(tempLeds, runZone.color, runZone.state, curZoneDef.count);
-    Serial.printf("Should show=%u\r\n", shouldShow);
+    // Serial.printf("Should show=%u\r\n", shouldShow);
 
     // Serial.printf("First pixel=%lu\r\n", (uint32_t)tempLeds[0]);
 
@@ -139,12 +139,12 @@ void PatternZone::updateZone(uint16_t index, bool forceUpdate)
                 runZone.reset();
             }
 
-            Serial.printf("Reset zone index=%u, state=%d, lastUpdate=%lu\r\n",
-                index, runZone.state, runZone.lastUpdateMs);
+            // Serial.printf("Reset zone index=%u, state=%d, lastUpdate=%lu\r\n",
+            //     index, runZone.state, runZone.lastUpdateMs);
         }
 
         if (incrementState(index, curPattern)) {
-            Serial.printf("Showing %d\n", _port);
+            // Serial.printf("Showing %d\n", _port);
             FastLED[_port].showLeds(_brightness);
         }
     }
@@ -180,13 +180,13 @@ void PatternZone::setColor(uint32_t color)
 
 bool PatternZone::incrementState(uint16_t index, Pattern *pattern)
 {
-    Serial.printf("Incrementing state for index=%u\r\n", index);
+    // Serial.printf("Incrementing state for index=%u\r\n", index);
     RunZone& runZone = getRunZoneFromIndex(index);
 
     bool shouldUpdate = runPattern(index, pattern, _leds, runZone.color, runZone.state);
     if (shouldUpdate)
     {
-        Serial.printf("Showing\r\n");
+        // Serial.printf("Showing\r\n");
     }
 
     runZone.state++;
