@@ -9,12 +9,12 @@ static Configuration configuration = {
     .teamNumber = 5690,
     .led0 = {
         .strip = {
-            .count = 66,
+            .count = 67,
             .zoneCount = 3,
             .initialZones = {
-                ZoneDefinition{0, 17},
-                ZoneDefinition{17, 32},
-                ZoneDefinition{49, 17},
+                ZoneDefinition{0, 18},
+                ZoneDefinition{18, 32},
+                ZoneDefinition{50, 17},
                 ZoneDefinition{0, 0},
                 ZoneDefinition{0, 0},
                 ZoneDefinition{0, 0},
