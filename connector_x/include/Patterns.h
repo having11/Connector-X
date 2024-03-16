@@ -32,6 +32,7 @@ enum class PatternType
     HappyEyes = 9,
     BlinkingEyes = 10,
     SurprisedEyes = 11,
+    Amogus = 12,
 };
 
 enum class PatternStateMode
@@ -324,6 +325,12 @@ namespace Animation
         return writeToMatrix(strip, state, "/surprised_eyes/", ledCount);
     }
 
+    static bool executePatternAmogus(CRGB *strip, uint32_t color,
+                                        uint16_t state, uint16_t ledCount)
+    {
+        return writeToMatrix(strip, state, "/amogus/", ledCount);
+    }
+
     // ! The order of these MUST match the order in PatternType !
     static Pattern patterns[PatternCount] = {
         {.type = PatternType::None,
@@ -386,5 +393,10 @@ namespace Animation
          .numStates = 1,
          .changeDelayDefault = 1000,
          .cb = Animation::executePatternSurprisedEyes},
+         {.type = PatternType::Amogus,
+         .mode = PatternStateMode::Constant,
+         .numStates = 41,
+         .changeDelayDefault = 125,
+         .cb = Animation::executePatternAmogus},
     };
 } // namespace Animation

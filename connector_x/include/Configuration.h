@@ -9,14 +9,14 @@ static Configuration configuration = {
     .teamNumber = 5690,
     .led0 = {
         .strip = {
-            .count = 42,
-            .zoneCount = 5,
+            .count = 66,
+            .zoneCount = 3,
             .initialZones = {
-                ZoneDefinition{0, 9},
-                ZoneDefinition{9, 15},
-                ZoneDefinition{24, 8},
-                ZoneDefinition{32, 5},
-                ZoneDefinition{37, 5},
+                ZoneDefinition{0, 17},
+                ZoneDefinition{17, 32},
+                ZoneDefinition{49, 17},
+                ZoneDefinition{0, 0},
+                ZoneDefinition{0, 0},
                 ZoneDefinition{0, 0},
                 ZoneDefinition{0, 0},
                 ZoneDefinition{0, 0},
@@ -24,7 +24,7 @@ static Configuration configuration = {
                 ZoneDefinition{0, 0}
             },
         },
-        .brightness = 20,
+        .brightness = 80,
         .isMatrix = false,
     },
     .led1 = {
@@ -33,7 +33,7 @@ static Configuration configuration = {
             .height = Matrix::Height,
             .flags = NEO_MATRIX_BOTTOM + NEO_MATRIX_RIGHT + NEO_MATRIX_COLUMNS + NEO_MATRIX_ZIGZAG,
         },
-        .brightness = 20,
+        .brightness = 50,
         .isMatrix = true,
     }
 };
