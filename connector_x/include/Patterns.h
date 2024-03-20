@@ -7,6 +7,7 @@
 
 #include "Constants.h"
 #include "Configuration.h"
+#include "SpectrumAnalyzer.h"
 
 #include <math.h>
 
@@ -33,6 +34,7 @@ enum class PatternType
     BlinkingEyes = 10,
     SurprisedEyes = 11,
     Amogus = 12,
+    Spectrum = 13,
 };
 
 enum class PatternStateMode
@@ -331,6 +333,39 @@ namespace Animation
         return writeToMatrix(strip, state, "/amogus/", ledCount);
     }
 
+    static bool executePatternSpectrum(CRGB *strip, uint32_t color,
+                                        uint16_t state, uint16_t ledCount)
+    {
+        uint16_t sampleCount = spectrum.sampleCount();
+        float *bins = nullptr;
+
+        bool entered = mutex_enter_timeout_us(&spectrumMtx, 20);
+        if (entered)
+        {
+            bins = spectrum.bins();
+            mutex_exit(&spectrumMtx);
+        }
+
+        if (bins)
+        {
+            FastLED_NeoMatrix *matrix = new FastLED_NeoMatrix(strip, configuration.led1.matrix.width,
+                configuration.led1.matrix.height, configuration.led1.matrix.flags);
+            if (ledCount != matrix->width() * matrix->height()) {
+                delete matrix;
+                return false;
+            }
+
+            for (uint16_t col = 0; col < matrix->width(); col++)
+            {
+                matrix->drawFastVLine(col, 0, matrix->height() * bins[col], matrix->Color24to16(color));
+            }
+
+            delete matrix;
+        }
+
+        return true;
+    }
+
     // ! The order of these MUST match the order in PatternType !
     static Pattern patterns[PatternCount] = {
         {.type = PatternType::None,
@@ -398,5 +433,10 @@ namespace Animation
          .numStates = 41,
          .changeDelayDefault = 125,
          .cb = Animation::executePatternAmogus},
+         {.type = PatternType::Spectrum,
+         .mode = PatternStateMode::Constant,
+         .numStates = 1,
+         .changeDelayDefault = 50,
+         .cb = Animation::executePatternSpectrum},
     };
 } // namespace Animation

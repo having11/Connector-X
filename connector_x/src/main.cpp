@@ -19,6 +19,7 @@
 #include "Constants.h"
 #include "PacketRadio.h"
 #include "PatternZone.h"
+#include "SpectrumAnalyzer.h"
 
 #include <memory>
 
@@ -97,6 +98,7 @@ void setup()
     mutex_init(&i2cCommandMtx);
     mutex_init(&radioDataMtx);
     mutex_init(&commandMtx);
+    mutex_init(&spectrumMtx);
 
     LittleFSConfig cfg;
     cfg.setAutoFormat(false);
@@ -143,6 +145,8 @@ void setup()
 
     rp2040.resumeOtherCore();
     rp2040.restartCore1();
+
+    spectrum.startSampling();
 }
 
 void setup1()
@@ -311,18 +315,15 @@ CRGB *getPixels(uint8_t port)
     return pixels[PinConstants::LED::DefaultPort];
 }
 
-// PatternRunner *getPatternRunner(uint8_t port)
-// {
-//     if (port < PinConstants::LED::NumPorts)
-//     {
-//         return patternRunners[port];
-//     }
-
-//     return patternRunners[PinConstants::LED::DefaultPort];
-// }
-
 void loop()
 {
+    bool entered = mutex_enter_timeout_us(&spectrumMtx, 20);
+    if (entered)
+    {
+        spectrum.update();
+        mutex_exit(&spectrumMtx);
+    }
+
     // If there's new data, process it
     if (newDataToParse)
     {
@@ -489,18 +490,18 @@ void centralRespond(Response response)
 
 void initI2C0(void)
 {
-    pinMode(PinConstants::I2C::Port0::AddrSwPin0, INPUT_PULLUP);
-    uint8_t addr0Val = digitalRead(PinConstants::I2C::Port0::AddrSwPin0) == HIGH ? 1 : 0;
-    pinMode(PinConstants::I2C::Port0::AddrSwPin1, INPUT_PULLUP);
-    uint8_t addr1Val = digitalRead(PinConstants::I2C::Port0::AddrSwPin1) == HIGH ? 1 : 0;
-    pinMode(PinConstants::I2C::Port0::AddrSwPin2, INPUT_PULLUP);
-    uint8_t addr2Val = digitalRead(PinConstants::I2C::Port0::AddrSwPin2) == HIGH ? 1 : 0;
+    // pinMode(PinConstants::I2C::Port0::AddrSwPin0, INPUT_PULLUP);
+    // uint8_t addr0Val = digitalRead(PinConstants::I2C::Port0::AddrSwPin0) == HIGH ? 1 : 0;
+    // pinMode(PinConstants::I2C::Port0::AddrSwPin1, INPUT_PULLUP);
+    // uint8_t addr1Val = digitalRead(PinConstants::I2C::Port0::AddrSwPin1) == HIGH ? 1 : 0;
+    // pinMode(PinConstants::I2C::Port0::AddrSwPin2, INPUT_PULLUP);
+    // uint8_t addr2Val = digitalRead(PinConstants::I2C::Port0::AddrSwPin2) == HIGH ? 1 : 0;
 
-    uint8_t i2cAddress =
-        PinConstants::I2C::Port0::BaseAddress |
-        (addr2Val << 2) |
-        (addr1Val << 1) |
-        (addr0Val);
+    // uint8_t i2cAddress =
+    //     PinConstants::I2C::Port0::BaseAddress |
+    //     (addr2Val << 2) |
+    //     (addr1Val << 1) |
+    //     (addr0Val);
 
     // Serial.printf("I2C address DEC=%d\n", i2cAddress);
 

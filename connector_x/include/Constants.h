@@ -68,6 +68,15 @@ namespace PinConstants
     }
 } // namespace Pin
 
+namespace FFT
+{
+    constexpr uint8_t AdcPin = A0;  // Pin 26
+    constexpr uint8_t CaptureChannel = 0;
+    constexpr uint16_t SampleCount = 64;
+    constexpr double SampleFrequencyHz = 50000;
+    constexpr uint16_t ClockDivider = 960;  // 50kHz
+}
+
 namespace Radio
 {
     // ! Change to match schematic
@@ -81,7 +90,7 @@ namespace Radio
 } // namespace Radio
 
 constexpr uint32_t UartBaudRate = 115200;
-constexpr uint8_t PatternCount = 13;
+constexpr uint8_t PatternCount = 14;
 
 namespace Animation
 {
