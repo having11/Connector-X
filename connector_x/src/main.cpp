@@ -60,6 +60,10 @@ static PacketRadio *radio;
 
 static Command command;
 static CommandDeque commandDequeue;
+static Adafruit_MPR121 cap;
+
+static volatile uint16_t curTouched = 0;
+static volatile uint16_t lastTouched = 0;
 
 static volatile bool systemOn = true;
 
@@ -106,6 +110,8 @@ void setup()
     LittleFS.setConfig(cfg);
 
     LittleFS.begin();
+
+    cap.begin(0x5A, &Wire1);
 
     pinMode(PinConstants::SPI::CS0, OUTPUT);
     digitalWrite(PinConstants::SPI::CS0, HIGH);
@@ -353,6 +359,86 @@ void loop()
         // Serial.println();
         handleCommand(cmdTemp);
     }
+
+    curTouched = cap.touched();
+
+    if ((curTouched & 1 << 0) && !(lastTouched & 1 << 0)) {
+        Command owoCmd = {
+            .commandType = CommandType::SetLedPort,
+            .commandData = {
+                .commandSetLedPort = {
+                    .port = 1,
+                },
+            },
+        };
+        
+        handleCommand(owoCmd);
+
+        owoCmd = {
+            .commandType = CommandType::SetPatternZone,
+            .commandData = {
+                .commandSetPatternZone = {
+                    .zoneIndex = 1,
+                    .reversed = 0,
+                },
+            },
+        };
+
+        handleCommand(owoCmd);
+        
+        owoCmd = {
+            .commandType = CommandType::Pattern,
+            .commandData = {
+                .commandPattern = {
+                    .pattern = 14,
+                    .oneShot = 0,
+                    .delay = 500,
+                },
+            },
+        };
+
+        handleCommand(owoCmd);
+    }
+
+    if (!(curTouched & 1 << 0) && (lastTouched & 1 << 0)) {
+        Command owoCmd = {
+            .commandType = CommandType::SetLedPort,
+            .commandData = {
+                .commandSetLedPort = {
+                    .port = 1,
+                },
+            },
+        };
+        
+        handleCommand(owoCmd);
+
+        owoCmd = {
+            .commandType = CommandType::SetPatternZone,
+            .commandData = {
+                .commandSetPatternZone = {
+                    .zoneIndex = 1,
+                    .reversed = 0,
+                },
+            },
+        };
+
+        handleCommand(owoCmd);
+        
+        owoCmd = {
+            .commandType = CommandType::Pattern,
+            .commandData = {
+                .commandPattern = {
+                    .pattern = 12,
+                    .oneShot = 0,
+                    .delay = -1,
+                },
+            },
+        };
+
+        handleCommand(owoCmd);
+    }
+
+    lastTouched = curTouched;
 
 #ifdef ENABLE_RADIO
     radio->update();

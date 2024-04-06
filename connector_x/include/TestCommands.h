@@ -62,7 +62,7 @@ static std::vector<TestCommand> testCommands =
             .commandType = CommandType::Pattern,
             .commandData = {
                 .commandPattern = {
-                    .pattern = 14,
+                    .pattern = 12,
                     .oneShot = 0,
                     .delay = -1,
                 },
