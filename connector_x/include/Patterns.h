@@ -35,6 +35,7 @@ enum class PatternType
     SurprisedEyes = 11,
     Amogus = 12,
     Spectrum = 13,
+    OwOEyes = 14,
 };
 
 enum class PatternStateMode
@@ -171,16 +172,21 @@ namespace Animation
 {
     static inline uint32_t Wheel(uint8_t position)
     {
+        position = 255 - position;
+
         if (position < 85)
         {
-            return (uint32_t)CRGB(position * 3, 255 - position * 3, 0);
-        }
-        else if (position < 170)
-        {
-            position -= 85;
             return (uint32_t)CRGB(255 - position * 3, 0, position * 3);
         }
-        return (uint32_t)CRGB(0, position * 3, 255 - position * 3);
+
+        if (position < 170)
+        {
+            position -= 85;
+            return (uint32_t)CRGB(0, position * 3, 255 - position * 3);
+        }
+
+        position -= 170;
+        return (uint32_t)CRGB(position * 3, 255 - position * 3, 0);
     }
     // The function signature comes from ExecutePatternCallback in Patterns.h
 
@@ -333,6 +339,12 @@ namespace Animation
         return writeToMatrix(strip, state, "/amogus/", ledCount);
     }
 
+    static bool executePatternOwOEyes(CRGB *strip, uint32_t color,
+                                        uint16_t state, uint16_t ledCount)
+    {
+        return writeToMatrix(strip, state, "/owo_eyes/", ledCount);
+    }
+
     static bool executePatternSpectrum(CRGB *strip, uint32_t color,
                                         uint16_t state, uint16_t ledCount)
     {
@@ -342,12 +354,15 @@ namespace Animation
         bool entered = mutex_enter_timeout_us(&spectrumMtx, 20);
         if (entered)
         {
-            bins = spectrum.bins();
+            Serial.printf("In bins\n");
+            bins = new float[sampleCount];
+            memcpy(bins, spectrum.bins(), sampleCount);
             mutex_exit(&spectrumMtx);
         }
 
         if (bins)
         {
+            Serial.printf("Got bins\n");
             FastLED_NeoMatrix *matrix = new FastLED_NeoMatrix(strip, configuration.led1.matrix.width,
                 configuration.led1.matrix.height, configuration.led1.matrix.flags);
             if (ledCount != matrix->width() * matrix->height()) {
@@ -357,10 +372,12 @@ namespace Animation
 
             for (uint16_t col = 0; col < matrix->width(); col++)
             {
+                Serial.printf("Col=%d | height=%f\n", col, matrix->height() * bins[col]);
                 matrix->drawFastVLine(col, 0, matrix->height() * bins[col], matrix->Color24to16(color));
             }
 
             delete matrix;
+            delete[] bins;
         }
 
         return true;
@@ -438,5 +455,10 @@ namespace Animation
          .numStates = 1,
          .changeDelayDefault = 50,
          .cb = Animation::executePatternSpectrum},
+         {.type = PatternType::OwOEyes,
+         .mode = PatternStateMode::Constant,
+         .numStates = 7,
+         .changeDelayDefault = 750,
+         .cb = Animation::executePatternOwOEyes},
     };
 } // namespace Animation

@@ -8,6 +8,7 @@
 #include <pico/mutex.h>
 
 #include <Adafruit_GFX.h>
+#include <Adafruit_MPR121.h>
 #include <FastLED_NeoMatrix.h>
 #include <LittleFS.h>
 
@@ -143,16 +144,18 @@ void setup()
 
     digitalWrite(PinConstants::CONFIG::ConfigLed, LOW);
 
+    // spectrum.init();
+
     rp2040.resumeOtherCore();
     rp2040.restartCore1();
 
-    spectrum.startSampling();
+    // spectrum.startSampling();
 }
 
 void setup1()
 {
     delay(2000);
-    // Serial.println("Setup1 has ended");
+    Serial.println("Setup1 has ended");
 }
 
 void loop1()
@@ -317,12 +320,9 @@ CRGB *getPixels(uint8_t port)
 
 void loop()
 {
-    bool entered = mutex_enter_timeout_us(&spectrumMtx, 20);
-    if (entered)
-    {
-        spectrum.update();
-        mutex_exit(&spectrumMtx);
-    }
+    // mutex_enter_blocking(&spectrumMtx);
+    // spectrum.update();
+    // mutex_exit(&spectrumMtx);
 
     // If there's new data, process it
     if (newDataToParse)

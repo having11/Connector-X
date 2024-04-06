@@ -90,7 +90,7 @@ namespace Radio
 } // namespace Radio
 
 constexpr uint32_t UartBaudRate = 115200;
-constexpr uint8_t PatternCount = 14;
+constexpr uint8_t PatternCount = 15;
 
 namespace Animation
 {

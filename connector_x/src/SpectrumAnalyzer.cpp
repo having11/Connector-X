@@ -1,7 +1,6 @@
 #include "SpectrumAnalyzer.h"
 
-SpectrumAnalyzer::SpectrumAnalyzer(irq_handler_t irq)
-  : irqHandler{irq}
+SpectrumAnalyzer::SpectrumAnalyzer()
 {
   vReal = new float[FFT::SampleCount];
   vImag = new float[FFT::SampleCount];
@@ -19,6 +18,7 @@ SpectrumAnalyzer::~SpectrumAnalyzer()
 
 void SpectrumAnalyzer::startSampling()
 {
+  Serial.printf("Started sampling\n");
   adc_fifo_drain();
   adc_run(false);
 
@@ -29,34 +29,27 @@ void SpectrumAnalyzer::startSampling()
 
 void SpectrumAnalyzer::update()
 {
-  if (hasData)
-  {
-    hasData = false;
+  dma_channel_wait_for_finish_blocking(dmaChannel);
+  digitalWriteFast(PinConstants::LED::AliveStatus, false);
+  Serial.printf("Has data true\n");
+  hasData = false;
 
-    memset(vImag, 0, FFT::SampleCount);
+  memset(vImag, 0, FFT::SampleCount);
 
-    uint64_t sum = 0;
-    for (uint16_t i = 0; i < FFT::SampleCount; i++)
-      sum += adcBuf[i];
+  uint64_t sum = 0;
+  for (uint16_t i = 0; i < FFT::SampleCount; i++)
+    sum += adcBuf[i];
 
-    float average = (float)sum / FFT::SampleCount;
+  float average = (float)sum / FFT::SampleCount;
 
-    for (uint16_t i = 0; i < FFT::SampleCount; i++)
-      vReal[i] = (float)adcBuf[i] - average;
+  for (uint16_t i = 0; i < FFT::SampleCount; i++)
+    vReal[i] = (float)adcBuf[i] - average;
 
-    fft->windowing(FFTWindow::Hamming, FFTDirection::Forward);
-    fft->compute(FFTDirection::Forward);
+  fft->windowing(FFTWindow::Hamming, FFTDirection::Forward);
+  fft->compute(FFTDirection::Forward);
+  fft->complexToMagnitude();
 
-    startSampling();
-  }
-}
-
-void SpectrumAnalyzer::dmaHandler()
-{
-  dma_channel_hw_t *hw = dma_channel_hw_addr(dmaChannel);
-  dma_channel_acknowledge_irq0(dmaChannel);
-
-  hasData = true;
+  startSampling();
 }
 
 uint16_t SpectrumAnalyzer::sampleCount() const
@@ -85,11 +78,8 @@ void SpectrumAnalyzer::init()
   delay(1000);
 
   dmaChannel = dma_claim_unused_channel(true);
+  Serial.printf("Got channel=%d\n", dmaChannel);
   cfg = dma_channel_get_default_config(dmaChannel);
-  irq_set_exclusive_handler(DMA_IRQ_0, irqHandler);
-  irq_set_enabled(DMA_IRQ_0, true);
-  dma_channel_set_irq0_enabled(dmaChannel, true);
-
   channel_config_set_transfer_data_size(&cfg, DMA_SIZE_8);
   channel_config_set_read_increment(&cfg, false);
   channel_config_set_write_increment(&cfg, true);

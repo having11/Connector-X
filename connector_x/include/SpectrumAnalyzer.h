@@ -19,7 +19,7 @@ class SpectrumAnalyzer
      * 
      * @param irq Call dmaHandler in the function
      */
-    SpectrumAnalyzer(irq_handler_t irq);
+    SpectrumAnalyzer();
     ~SpectrumAnalyzer();
     void init(void);
     void startSampling(void);
@@ -43,17 +43,9 @@ class SpectrumAnalyzer
     float *vReal;
     float *vImag;
     uint8_t *adcBuf;
-    irq_handler_t irqHandler;
-    bool hasData = false;
+    volatile bool hasData = false;
     std::unique_ptr<ArduinoFFT<float>> fft;
 };
 
 static mutex_t spectrumMtx;
-static void dmaIrqHandler(void);
-
-static SpectrumAnalyzer spectrum{dmaIrqHandler};
-
-void dmaIrqHandler()
-{
-  spectrum.dmaHandler();
-}
+static SpectrumAnalyzer spectrum{};
