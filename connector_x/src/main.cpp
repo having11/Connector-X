@@ -26,6 +26,8 @@
 
 // Uncomment to enable radio module communications
 // #define ENABLE_RADIO
+// Uncomment to enable OwO touch
+// #define ENABLE_OWO
 
 static mutex_t i2cCommandMtx;
 static mutex_t radioDataMtx;
@@ -60,10 +62,13 @@ static PacketRadio *radio;
 
 static Command command;
 static CommandDeque commandDequeue;
+
+#ifdef ENABLE_OWO
 static Adafruit_MPR121 cap;
 
 static volatile uint16_t curTouched = 0;
 static volatile uint16_t lastTouched = 0;
+#endif
 
 static volatile bool systemOn = true;
 
@@ -111,7 +116,9 @@ void setup()
 
     LittleFS.begin();
 
+    #ifdef ENABLE_OWO
     cap.begin(0x5A, &Wire1);
+    #endif
 
     pinMode(PinConstants::SPI::CS0, OUTPUT);
     digitalWrite(PinConstants::SPI::CS0, HIGH);
@@ -360,6 +367,7 @@ void loop()
         handleCommand(cmdTemp);
     }
 
+    #ifdef ENABLE_OWO
     curTouched = cap.touched();
 
     if ((curTouched & 1 << 0) && !(lastTouched & 1 << 0)) {
@@ -439,6 +447,7 @@ void loop()
     }
 
     lastTouched = curTouched;
+    #endif
 
 #ifdef ENABLE_RADIO
     radio->update();
