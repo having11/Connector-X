@@ -195,4 +195,42 @@ static std::vector<TestCommand> testCommands =
         },
         .delayMs = 500,
     },
+    {
+        .cmd = {
+            .commandType = CommandType::SetPatternZone,
+            .commandData = {
+                .commandSetPatternZone = {
+                    .zoneIndex = 2,
+                    .reversed = 0,
+                },
+            },
+        },
+        .delayMs = 500,
+    },
+    {
+        .cmd = {
+            .commandType = CommandType::ChangeColor,
+            .commandData = {
+                .commandColor = {
+                    .red = 255,
+                    .green = 150,
+                    .blue = 0,
+                },
+            },
+        },
+        .delayMs = 500,
+    },
+    {
+        .cmd = {
+            .commandType = CommandType::Pattern,
+            .commandData = {
+                .commandPattern = {
+                    .pattern = 2,
+                    .oneShot = 0,
+                    .delay = 600,
+                },
+            },
+        },
+        .delayMs = 500,
+    },
 };
