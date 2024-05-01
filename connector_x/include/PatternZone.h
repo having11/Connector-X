@@ -5,36 +5,12 @@
 
 #include "Commands.h"
 #include "Patterns.h"
+#include "Configurator.h"
+#include "ZoneDefinition.h"
 
 #include <vector>
 #include <memory>
 #include <string>
-
-struct ZoneDefinition {
-    uint16_t offset;
-    uint16_t count;
-
-    ZoneDefinition(uint16_t off, uint16_t ct)
-    {
-        offset = off;
-        count = ct;
-    }
-
-    explicit ZoneDefinition(const NewZone &zone)
-    {
-        offset = zone.offset;
-        count = zone.count;
-    }
-
-    inline std::string toString()
-    {
-        std::string str = "Offset: ";
-        str += std::to_string(offset) + "\t";
-        str += "count: " + std::to_string(count) + "\n";
-
-        return str;
-    }
-};
 
 struct RunZone {
     uint16_t index;
@@ -117,7 +93,7 @@ class PatternZone {
 
         void setColor(uint32_t color);
 
-        void incrementState(uint16_t index, Pattern *pattern);
+        bool incrementState(uint16_t index, Pattern *pattern);
 
         inline void reset()
         {
