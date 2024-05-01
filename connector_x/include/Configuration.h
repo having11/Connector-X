@@ -13,7 +13,7 @@ static Configuration configuration = {
             .zoneCount = 4,
             .initialZones = {
                 ZoneDefinition{0, 18},
-                ZoneDefinition{18, 32},
+                ZoneDefinition{17, 32},
                 ZoneDefinition{50, 17},
                 ZoneDefinition{67, 26},
                 ZoneDefinition{0, 0},
