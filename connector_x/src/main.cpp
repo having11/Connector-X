@@ -52,6 +52,12 @@ static volatile bool newData = false;
 static volatile bool newDataToParse = false;
 
 static volatile uint8_t ledPort = 0;
+static const std::vector<ZoneDefinition> defaultZoneDefs = {
+    ZoneDefinition{0, 25},
+    ZoneDefinition{25, 25},
+    ZoneDefinition{50, 25},
+    ZoneDefinition{75, 25},
+};
 
 static CRGB *pixels[PinConstants::LED::NumPorts];
 static std::unique_ptr<PatternZone> zones[PinConstants::LED::NumPorts];
@@ -74,6 +80,8 @@ static volatile bool systemOn = true;
 
 void setup()
 {
+    rp2040.idleOtherCore();
+
     pinMode(PinConstants::LED::AliveStatus, OUTPUT);
     digitalWrite(PinConstants::LED::AliveStatus, HIGH);
     pinMode(PinConstants::CONFIG::ConfigSetupBtn, INPUT_PULLUP);
@@ -133,6 +141,9 @@ void setup()
     // TODO: make into a loop
     initPixels(0);
     initPixels(1);
+
+    rp2040.resumeOtherCore();
+
 
 #ifdef ENABLE_RADIO
     radio = new PacketRadio(&SPI1, config, handleRadioDataReceive);
@@ -304,16 +315,15 @@ void loop1()
                 CommandSyncZoneStates data = cmd.commandData.commandSyncZoneStates;
 
                 zones[ledPort]->resetZones(data.zones, data.zoneCount);
-                break;
-            }
-        }
-
         // Serial.print(F("ON="));
         // Serial.println(systemOn);
+            }
+        }
     }
 
     if (systemOn)
     {
+        // zones[1]->updateZones();
         for (int i = 0; i < PinConstants::LED::NumPorts; i++)
         {
             zones[i]->updateZones();
