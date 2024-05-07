@@ -14,7 +14,7 @@ A drop-in, highly-configurable IO board compatible with the NI/FRC RoboRIO
 
 ## The concept
 
-Have you ever wanted to leverage the power and extensibility of the Arduino ecosystem on other hardware but realized it's not supported? This was the case for FRC team 5690 SubZero Robotics in the 2023 when we were attempting to add sensors and LEDs to our robot. Born from this struggle was a very simple Arduino Nano-based board that supported a single LED strip, limited LED patterns, and a duty-cycle output for lidar. As one might imagine, this was quite limited, so the 2023 off-season was spent designing and then redesigning a brand new system called the Connector-X (Connect Anything).
+Have you ever wanted to leverage the power and extensibility of the Arduino ecosystem on other hardware but realized it's not supported? This was the case for FRC team 5690 SubZero Robotics in the 2023 season when we were attempting to add sensors and LEDs to our robot. Born from this struggle was a very simple Arduino Nano-based board that supported a single LED strip, limited LED patterns, and a duty-cycle output for lidar. As one might imagine, this was quite limited, so the 2023 off-season was spent designing and then redesigning a brand new system called the Connector-X (Connect Anything).
 
 The new system is meant to be far faster and more flexible, as its Raspberry Pi Pico processor allows it to act as both a peripheral for a RoboRIO and a central device for connecting sensors.
 
