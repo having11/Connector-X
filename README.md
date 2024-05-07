@@ -42,8 +42,34 @@ Within the `Configuration`, either a `strip` or `matrix` configuration can be se
 
 ## Command structure
 
+Now that Commands have been mentioned several times, you're probably wondering what it actually _is_. A Command is simply a small amount of data that the controlling device sends to the Connector-X containing the `CommandType` and an arbitrary amount of additional data depending on what the `CommandType` equals.
+
+| `CommandType`                   |                              Description                              |         Additional data          |
+| :------------------------------ | :-------------------------------------------------------------------: | :------------------------------: |
+| On                              |                         Turns on an LED port                          |               N/A                |
+| Off                             |                         Turns off an LED port                         |               N/A                |
+| Pattern                         |                  Sets the current Pattern for a Zone                  | Pattern type, is one-shot, delay |
+| ChangeColor                     |                   Sets the current Color for a Zone                   |             R, G, B              |
+| ReadPatternDone                 |               Checks if the set Pattern is done running               |               N/A                |
+| SetLedPort                      |                       Sets the active LED Port                        |           Port number            |
+| DigitalSetup                    |          Sets the mode (Read or Write) for a Digital IO Port          |        Port number, mode         |
+| DigitalWrite                    |                  Sets a Digital IO Port High or Low                   |        Port number, value        |
+| DigitalRead                     |                    Reads a Digital IO Port's state                    |           Port number            |
+| SetConfig (unused)              |                 Sets a new Config for the Connector-X                 |               N/A                |
+| RadioSend (unused)              |  Sends data to other teams via the onboard Packet Radio when enabled  |               N/A                |
+| RadioGetLatestReceived (unused) |            Gets the latest Packet Radio data when enabled             |               N/A                |
+| GetColor                        |                   Gets the active Color for a Zone                    |               N/A                |
+| GetPort                         |                        Gets the selected Port                         |               N/A                |
+| SetPatternZone                  |              Sets the current Zone for the current Port               |     Zone index, is reversed      |
+| SetNewZones (unused)            |               Configures new Zones for the current Port               |      Zone count, zone array      |
+| SyncStates                      | Sets the selected Zones' Patterns to the same State (animation frame) |   Zone count, zone index array   |
+
 ## Test sequences
 
+It is possible to execute a series of commands upon startup without intervention from the controlling device. To do so, simply specify a list of `TestCommand`s in [`TestCommands.h`](./connector_x/include/TestCommands.h) that include the command type and any other required `commandData` within the `union`.
+
 ## Expansion
+
+Feel free to add Commands and Patterns to expand the functionality of your Connector-X. Some ideas might include adding an I2C sensor and passing it through, controlling an LED, or displaying images on a screen via SPI.
 
 V3 coming soon...
