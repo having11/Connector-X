@@ -30,7 +30,7 @@ At the bottom of the board is a male 2 x 17 header and a female 2 x 17 header, b
 
 ## What are ports and zones?
 
-As mentioned before, the two ports each connect to a single LED strip, but that leads to the question of how different patterns can be easily shown on the same strip. So rather than connecting a strip per-port, the Connector-X allows for the strip to be subdivided into virtual zones that range from a single pixel all the way to the entire strip's length. To specify one, simply declare the offset (inclusive) and the size of the zone while ensuring it stays within the total number of LEDs present in the strip. The controlling device then sends commands to select the desired port and zone by index when settings colors/patterns.
+As mentioned before, the two ports each connect to a single LED strip, but that leads to the question of how different patterns can be easily shown on the same strip. So rather than connecting a strip per-port, the Connector-X allows for the strip to be subdivided into virtual zones that range from a single pixel all the way to the entire strip's length. To specify one, simply declare the offset (inclusive) and the size of the zone while ensuring it stays within the total number of LEDs present in the strip. The controlling device then sends commands to select the desired port and zone by index when setting colors/patterns.
 
 ## It can show images
 
